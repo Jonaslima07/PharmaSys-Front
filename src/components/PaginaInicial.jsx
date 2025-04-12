@@ -15,7 +15,7 @@ const PaginaInicial = () => {
               <Button variant="outline-primary" className="mt-3">Saiba mais</Button>
             </Col>
             <Col md={6}>
-              <img src="" alt="" className="img-fluid" />
+              <img src="" alt="" className="img-fluid" />  {/* caso mude de ideia para as imagens */}
             </Col>
           </Row>
         </Container>
