@@ -3,63 +3,26 @@
   }
   
 
-  .card-lista-funcionalidades {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  padding-left: 4px;
-  color: #12141a;
-  width: 100%; /* Garantir que a largura seja 100% */
-  
-}
 
-.func-item h5 {
-  font-weight: 700;
-  font-size: 1.2rem;
-  margin-bottom: 8px;
-}
-
-.func-item p {
-  margin: 0;
-  color: #78C2FF;
-  font-size: 1rem;
-  line-height: 1.6;
-}
-
+/* Estilo para a seção de medicamentos */
 .medicamentos-section {
-  background-color: #000; /* Fundo escuro igual à imagem */
+  background-color: #000; /* Fundo escuro */
   color: white;
   border-radius: 12px;
-  padding: 0px;
+  padding: 30px 40px;
   width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+  align-items: center;
 }
-
-.func-item {
-  padding: 5px;
-  border-bottom: 1px solid #ccc; /* Adiciona uma linha sutil entre as divs */
-  width: 100%; /* Garantir que a linha ocupe toda a largura */
-  box-sizing: border-box; /* Certifica-se de que padding e borda sejam considerados na largura */
-  margin-left: 0; /* Remove qualquer margem à esquerda */
-}
-
-.func-item:last-child {
-  border-bottom: none; /* Remove a linha da última div */
-}
-
-.row {
-  width: 100%; /* Garantir que a linha ocupe toda a largura da coluna */
-}
-
-.col-md-8 {
-  width: 100%; /* Garantir que a coluna ocupe toda a largura */
-}
-
 
 .hero-section {
   background-image: url('images/remedioazul.jpg'); /* Definindo a imagem como fundo */
   background-size: cover; /* Garantir que a imagem cubra toda a área da seção */
   background-position: center center; /* Centraliza a imagem */
-  height: 400px; /* Ajuste a altura para preencher a tela inteira */
+  height: 520px; /* Ajuste a altura para preencher a tela inteira */
   color: white;
   display: flex;
   justify-content: center; /* Alinha o conteúdo ao centro verticalmente */
@@ -79,13 +42,13 @@
 }
 
 .hero-section .btn {
-  background-color: #FF7A00; /* Cor do botão */
+  background-color: #0066cc; /* Cor do botão */
   color: white;
   border: none;
 }
 
 .hero-section .btn:hover {
-  background-color: #e16a00; /* Efeito de hover no botão */
+  background-color: #78C2FF; /* Efeito de hover no botão */
 }
 
 

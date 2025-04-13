@@ -63,10 +63,10 @@ const CriarContaForm = () => {
   };
 
   return (
-    <Container className="d-flex justify-content-center align-items-center" style={{ height: '100vh', backgroundColor: '#78C2FF' }}>
+    <Container className="d-flex justify-content-center align-items-center" style={{ height: '108vh', backgroundColor: '#78C2FF' }}>
       <Row className="w-100">
         <Col md={4} sm={12} className="p-5 rounded" style={cardStyle}>
-          <h2 className="text-center" style={{ color: '#006D77', marginBottom: '80px' }}>ProcureAki</h2>
+          <h2 className="text-center" style={{ color: '#fff', marginBottom: '80px' }}>PharmaSys</h2>
           <h4 className="text-center" style={{ marginTop: '-45px', fontSize: '28px' }}>Criar Conta</h4>
           <Form onSubmit={handleSubmit}>
             {/* Nome de Usuário */}
@@ -119,9 +119,9 @@ const CriarContaForm = () => {
                   }}
                 >
                   {showPassword ? (
-                    <FaEyeSlash style={{ color: '#006D77' }} />
+                    <FaEyeSlash style={{ color: '#000' }} />
                   ) : (
-                    <FaEye style={{ color: '#006D77' }} />
+                    <FaEye style={{ color: '#000' }} />
                   )}
                 </div>
               </InputGroup>
@@ -149,7 +149,7 @@ const CriarContaForm = () => {
           <div className="text-center mt-3" style={loginRedirectStyle}>
             <p>
               Já tem uma conta?{' '}
-              <a href="/login" style={{ color: '#006D77' }}>
+              <a href="/login" style={{ color: '#0066cc' }}>
                 Faça login
               </a>
             </p>
@@ -174,7 +174,7 @@ const cardStyle = {
 };
 
 const buttonStyle = {
-  backgroundColor: '#006D77',
+  backgroundColor: '#0066cc',
   border: 'none',
   color: 'white',
   fontSize: '16px',

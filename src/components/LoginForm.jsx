@@ -56,7 +56,7 @@ const LoginForm = () => {
     <Container className="d-flex justify-content-center align-items-center" style={{ height: '100vh', backgroundColor: '#78C2FF' }}>
       <Row className="w-100">
         <Col md={4} sm={12} className="p-5 rounded" style={cardStyle}>
-          <h2 className="text-center" style={{ color: '#006D77', marginBottom: '140px' }}>ProcureAki</h2>
+          <h2 className="text-center" style={{ color: '#fff', marginBottom: '140px' }}>PharmaSys</h2>
           <h4 className="text-center" style={{ marginTop: '-45px', fontSize: '35px' }}>Login</h4>
           <Form onSubmit={handleSubmit}>
             <Form.Group controlId="email" className="mb-3">
@@ -94,9 +94,9 @@ const LoginForm = () => {
                   }}
                 >
                   {showPassword ? (
-                    <FaEyeSlash style={{ color: '#006D77' }} />
+                    <FaEyeSlash style={{ color: '#000' }} />
                   ) : (
-                    <FaEye style={{ color: '#006D77' }} />
+                    <FaEye style={{ color: '#000' }} />
                   )}
                 </div>
               </InputGroup>
@@ -111,7 +111,7 @@ const LoginForm = () => {
           <div className="text-center mt-3" style={createAccountStyle}>
             <p>
               Não tem uma conta ainda?{' '}
-              <a href="/criar-conta" style={{ color: '#006D77' }}>
+              <a href="/criar-conta" style={{ color: '#0066cc' }}>
                 Criar conta
               </a>
             </p>
@@ -121,6 +121,9 @@ const LoginForm = () => {
     </Container>
   );
 };
+
+export default LoginForm;
+
 
 // Estilos personalizados
 const cardStyle = {
@@ -136,7 +139,7 @@ const cardStyle = {
 };
 
 const buttonStyle = {
-  backgroundColor: '#006D77',
+  backgroundColor: '#0066cc',
   border: 'none',
   color: 'white',
   fontSize: '16px',
@@ -156,4 +159,3 @@ const createAccountStyle = {
   top: '39px',
 };
 
-export default LoginForm;

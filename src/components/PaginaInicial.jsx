@@ -12,7 +12,7 @@ const PaginaInicial = () => {
             <Col md={6}>
               <h1 className="display-4">Bem-vindo ao PharmaSys</h1>
               <p className="lead">Sistema de Gerenciamento de Medicamentos e Pacientes</p>
-              <Button variant="outline-primary" className="mt-3">Saiba mais</Button>
+              <Button variant="outline-primary" className="mt-3">Entrar</Button>
             </Col>
             <Col md={6}>
               <img src="" alt="" className="img-fluid" />  {/* caso mude de ideia para as imagens */}
@@ -45,26 +45,35 @@ const PaginaInicial = () => {
                 </Carousel.Item>
               </Carousel>
             </Col>
+          
             
-            {/* Gerenciamento de Medicamentos (Columns) */}
-            <Col md={8}>
+             {/* Cards de Gerenciamento de Medicamentos (estilo da imagem) */}
+             <Col md={8}>
               <Row>
                 <Col md={4}>
-                  <Card className="h-100">
-                    <div className="card-lista-funcionalidades">
-                      <div className="func-item">
-                        <h5>Controle de Lotes</h5>
-                        <p>Gerencie os lotes de medicamentos e receba alertas sobre validade.</p>
-                      </div>
-                      <div className="func-item">
-                        <h5>Promoções Inteligentes</h5>
-                        <p>Aproveite medicamentos próximos ao vencimento para promoções e venda.</p>
-                      </div>
-                      <div className="func-item">
-                        <h5>Disposição de Medicamentos</h5>
-                        <p>Controle a quantidade de medicamentos dispensados para cada paciente.</p>
-                      </div>
-                    </div>
+                  <Card style={cardStyles.cardone}>
+                    <Card.Body>
+                      <h5 style={cardStyles.titleone}>Controle de Lotes</h5>
+                      <p style={cardStyles.paragraphone}>Gerencia os medicamentos que serão armazenados em lotes e será registrado a validade do lote no sistema.</p>
+                    </Card.Body>
+                  </Card>
+                </Col>
+
+                <Col md={4}>
+                  <Card style={cardStyles.cardtwo}>
+                    <Card.Body>
+                      <h5 style={cardStyles.titletwo}>Dispensação de Medicamentos</h5>
+                      <p style={cardStyles.paragraphtwo}>Irá registrar cada medicamento e a quantidade retirada mensalmente de cada paciente.</p>
+                    </Card.Body>
+                  </Card>
+                </Col>
+
+                <Col md={4}>
+                  <Card style={cardStyles.cardthree}>
+                    <Card.Body>
+                      <h5 style={cardStyles.titlethree}>Cadastro de Pacientes</h5>
+                      <p style={cardStyles.paragraphthree}>Será cadastrado os novos pacientes no município, para a retirada de seus medicamentos.</p>
+                    </Card.Body>
                   </Card>
                 </Col>
               </Row>
@@ -74,6 +83,7 @@ const PaginaInicial = () => {
       </section>
 
       <hr className="my-5" />
+
     
 
           {/* Contatos */}
@@ -144,3 +154,129 @@ const PaginaInicial = () => {
 };
 
 export default PaginaInicial;
+
+
+const cardStyles = {
+  cardone: {
+    backgroundColor: '#ffffff',
+    height:'190px',
+    width:'400px',
+    borderRadius: '16px',
+    boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
+    padding: '20px',
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'space-between',
+    textAlign: 'center',
+    color: '#12141a',
+    border: '3px solid #78C2FF',
+    transition: 'box-shadow 0.3s ease, transform 0.3s ease',
+    position: 'relative', // Para permitir ajustes no layout
+    left: '0px',
+    top: '-80px'
+  },
+  cardtwo: {
+    backgroundColor: '#ffffff',
+    height:'192px',
+    width:'400px',
+    borderRadius: '16px',
+    boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
+    padding: '20px',
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'space-between',
+    textAlign: 'center',
+    color: '#12141a',
+    border: '3px solid #78C2FF',
+    transition: 'box-shadow 0.3s ease, transform 0.3s ease',
+    position: 'relative', // Para permitir ajustes no layout
+    left: '140px',
+    top: '-82px'
+  },
+  cardthree: {
+    backgroundColor: '#ffffff',
+    height:'192px',
+    width:'400px',
+    borderRadius: '16px',
+    boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
+    padding: '20px',
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'space-between',
+    textAlign: 'center',
+    color: '#12141a',
+    border: '3px solid #78C2FF',
+    transition: 'box-shadow 0.3s ease, transform 0.3s ease',
+    position: 'relative', // Para permitir ajustes no layout
+    left: '-340px',
+    top: '130px'
+  },
+  hover: {
+    boxShadow: '0 6px 16px rgba(0, 0, 0, 0.2)',
+    transform: 'translateY(-5px)',
+  },
+  titletwo: {
+    height:'27px',
+    position: 'relative',
+    top:'-25px',
+    fontWeight: 700,
+    fontSize: '1.2rem',
+    color: '#000',
+    marginBottom: '15px',
+    textAlign: 'center',
+    textTransform: 'uppercase',
+  },
+  titlethree: {
+    height:'21px',
+    position: 'relative',
+    top:'-22px',
+    fontWeight: 700,
+    fontSize: '1.2rem',
+    color: '#000',
+    marginBottom: '15px',
+    textAlign: 'center',
+    textTransform: 'uppercase',
+  },
+  titleone: {
+    height:'21px',
+    position: 'relative',
+    top:'-22px',
+    fontWeight: 700,
+    fontSize: '1.2rem',
+    color: '#000',
+    marginBottom: '15px',
+    textAlign: 'center',
+    textTransform: 'uppercase',
+  },
+  
+  paragraphone: {
+    margin: 0,
+    color: '#78C2FF',
+    fontSize: '1.3rem',
+    lineHeight: '1.6',
+    textAlign: 'center',
+    position: 'relative', // Para permitir ajustes no layout
+    left: '-14px',
+    top: '-22px'
+  },
+  paragraphtwo: {
+    margin: 0,
+    color: '#78C2FF',
+    fontSize: '1.3rem',
+    lineHeight: '1.6',
+    textAlign: 'center',
+    position: 'relative', // Para permitir ajustes no layout
+    left: '-14px',
+    top: '-10px',
+  },
+  paragraphthree: {
+    margin: 0,
+    color: '#78C2FF',
+    fontSize: '1.3rem',
+    lineHeight: '1.6',
+    textAlign: 'center',
+    position: 'relative', // Para permitir ajustes no layout
+    left: '-14px',
+    top: '-10px',
+  },
+};

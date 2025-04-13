@@ -5,3 +5,16 @@
     color: aqua;
    
 }
+.nav-link {
+    color: #fff !important;
+    font-weight: 600;
+    font-size: 16px;
+    margin-right: 90px;
+    display: inline-block;
+  }
+  
+  .nav-link:hover,
+  .nav-link:active {
+    color: #78C2FF !important;
+  }
+  
