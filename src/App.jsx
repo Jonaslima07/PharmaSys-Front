@@ -4,7 +4,7 @@ import Layout from './templates/Layout.jsx';
 import Home from './views/Home.jsx';
 import CriarConta from './views/CriarConta.jsx';  // Comentei temporariamente
 // import CadastrarLoja from './views/CadastrarLoja.jsx';  // Comentei temporariamente
-// import CadastroCliente from './views/CadastroCliente.jsx';  // Comentei temporariamente
+ import CadastroPaciente from './views/CadastroPaciente.jsx';  // Comentei temporariamente
 // import LojaCategoria from './components/LojaCategoria.jsx';  // Comentei temporariamente
 import Login from './views/Login.jsx';  // Comentei temporariamente
 import NoPage from './views/NoPage.jsx';  // Este ainda vai ser usado para a rota de erro
@@ -22,7 +22,7 @@ function App() {
         },
         {
           path: 'cadastropaciente',
-          // element: <CadastrarPaciente />,  // Comentei temporariamente
+           element: <CadastroPaciente />,  // Comentei temporariamente
         },
         {
           path: 'criarconta',
