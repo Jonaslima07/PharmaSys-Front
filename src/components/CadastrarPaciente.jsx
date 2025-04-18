@@ -12,6 +12,13 @@ const CadastrarPaciente = () => {
     medicamento: '',
     quantidade: 0,
   });
+  const [formErrors, setFormErrors] = useState({
+    nome: false,
+    numeroCartaoSUS: false,
+    identidade: false,
+    medicamento: false,
+    quantidade: false,
+  });
   const [modalVisible, setModalVisible] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [location, setLocation] = useState('');
@@ -129,8 +136,18 @@ const CadastrarPaciente = () => {
   };
 
   const handleAddPaciente = () => {
-    if (!formData.nome || !formData.numeroCartaoSUS || !formData.identidade || !formData.medicamento || !formData.quantidade) {
-      alert('Erro', 'Por favor, preencha todos os campos!');
+    const errors = {
+      nome: !formData.nome,
+      numeroCartaoSUS: !/^\d{15}$/.test(formData.numeroCartaoSUS), // Valida 15 números
+      identidade: !/^\d{10}$/.test(formData.identidade), // Valida 10 números
+      medicamento: !formData.medicamento,
+      quantidade: !formData.quantidade,
+    };
+    
+    setFormErrors(errors);
+
+    if (Object.values(errors).includes(true)) {
+      alert('Por favor, preencha todos os campos!');
       return;
     }
 
@@ -153,6 +170,13 @@ const CadastrarPaciente = () => {
     });
     setModalVisible(false);
     setEditMode(false);
+    setFormErrors({
+      nome: false,
+      numeroCartaoSUS: false,
+      identidade: false,
+      medicamento: false,
+      quantidade: false,
+    });
   };
 
   const openModal = (paciente) => {
@@ -173,17 +197,20 @@ const CadastrarPaciente = () => {
     setModalVisible(true);
   };
 
+  
   const renderPaciente = (paciente) => (
     <Card className="mb-3" style={styles.pacienteCard} key={paciente.id} onClick={() => openModal(paciente)}>
       <Card.Body>
-        <Card.Title>Nome: {paciente.nome}</Card.Title>
-        <Card.Text>Medicamento: {paciente.medicamento}</Card.Text>
-        <Card.Text>Quantidade: {paciente.quantidade}</Card.Text>
-        <Card.Text>Número do Cartão SUS: {paciente.numeroCartaoSUS}</Card.Text>
-        <Card.Text>Identidade: {paciente.identidade}</Card.Text>
+        <Card.Title>Nome: <span style={{ color: '#0066cc' }}>{paciente.nome}</span></Card.Title>
+        <Card.Text>Medicamento: <span style={{ color: '#0066cc' }}>{paciente.medicamento}</span></Card.Text>
+        <Card.Text>Quantidade: <span style={{ color: '#0066cc' }}>{paciente.quantidade}</span></Card.Text>
+        <Card.Text>Número do Cartão SUS: <span style={{ color: '#0066cc' }}>{paciente.numeroCartaoSUS}</span></Card.Text>
+        <Card.Text>Identidade: <span style={{ color: '#0066cc' }}>{paciente.identidade}</span></Card.Text>
       </Card.Body>
     </Card>
   );
+  
+  
 
   return (
     <div className="container" style={styles.container}>
@@ -193,8 +220,12 @@ const CadastrarPaciente = () => {
       </div>
       <div className="button-container">
         <Button variant="primary" onClick={() => openModal()} style={styles.addButton}>
-          + Adicionar Paciente
+           Cadastrar Paciente
         </Button>
+
+        <p style={styles.paragrobaixo}>Faça seu cadastro aqui clicando no botão de cadastrar para poder dispensar seu medicamento!</p>
+
+        <img src="images/hospitalpaciente.jpeg" alt="Imagem do Carrossel" style={styles.addImg} />
       </div>
 
       {pacientes.length === 0 ? (
@@ -206,64 +237,80 @@ const CadastrarPaciente = () => {
       )}
 
       {/* Modal for Adding/Editing Pacientes */}
-      <Modal show={modalVisible} onHide={resetForm}>
-        <Modal.Header closeButton>
-          <Modal.Title>{editMode ? 'Editar Paciente' : 'Adicionar Paciente'}</Modal.Title>
+      <Modal  show={modalVisible} onHide={resetForm}>
+        <Modal.Header style={{ backgroundColor: '#CCCCCC', padding: '20px', borderRadius: '8px' }} closeButton>
+          <Modal.Title style={{ backgroundColor: '#CCCCCC' }}>{editMode ? 'Editar Paciente' : 'Adicionar Paciente'}</Modal.Title>
         </Modal.Header>
-        <Modal.Body>
-          <Form>
+        <Modal.Body style={{ backgroundColor: '#CCCCCC' }}>
+          <Form style={{ backgroundColor: '#CCCCCC', padding: '20px', borderRadius: '8px' }}>
             <Form.Group className="mb-3" controlId="nome">
-              <Form.Label>Nome</Form.Label>
+              <Form.Label style={{ color: '#000000' }}>Nome</Form.Label>
               <Form.Control
                 type="text"
                 placeholder="Nome"
                 value={formData.nome}
                 onChange={(e) => handleInputChange('nome', e.target.value)}
+                isInvalid={formErrors.nome}
               />
             </Form.Group>
 
             <Form.Group className="mb-3" controlId="numeroCartaoSUS">
-              <Form.Label>Número do Cartão do SUS</Form.Label>
+              <Form.Label style={{ color: '#000000' }}>Número do Cartão do SUS</Form.Label>
               <Form.Control
                 type="text"
                 placeholder="Número do Cartão SUS"
                 value={formData.numeroCartaoSUS}
                 onChange={(e) => handleInputChange('numeroCartaoSUS', e.target.value)}
+                isInvalid={formErrors.numeroCartaoSUS}
               />
+              {formErrors.numeroCartaoSUS && (
+                <Form.Control.Feedback type="invalid" style={{ marginTop: '-16px', fontSize: '14px', color: '#dc3545' }}>
+                  O número do Cartão SUS deve ter 15 dígitos numéricos.
+                </Form.Control.Feedback>
+              )}
             </Form.Group>
 
             <Form.Group className="mb-3" controlId="identidade">
-              <Form.Label>Identidade</Form.Label>
+              <Form.Label style={{ color: '#000000' }}>Identidade</Form.Label>
               <Form.Control
                 type="text"
                 placeholder="Identidade"
                 value={formData.identidade}
                 onChange={(e) => handleInputChange('identidade', e.target.value)}
+                isInvalid={formErrors.identidade}
               />
+              {formErrors.identidade && (
+                <Form.Control.Feedback type="invalid" style={{ marginTop: '-16px', fontSize: '14px', color: '#dc3545' }}>
+                  A identidade deve ter 10 dígitos numéricos.
+                </Form.Control.Feedback>
+              )}
             </Form.Group>
 
+
             <Form.Group className="mb-3" controlId="medicamento">
-              <Form.Label>Medicamento</Form.Label>
+              <Form.Label style={{ color: '#000000' }}>Medicamento</Form.Label>
               <Form.Control
                 type="text"
                 placeholder="Medicamento"
                 value={formData.medicamento}
                 onChange={(e) => handleInputChange('medicamento', e.target.value)}
+                isInvalid={formErrors.medicamento}
               />
             </Form.Group>
 
             <Form.Group className="mb-3" controlId="quantidade">
-              <Form.Label>Quantidade</Form.Label>
+              <Form.Label style={{ color: '#000000' }}>Quantidade</Form.Label>
               <Form.Control
                 type="number"
                 placeholder="Quantidade"
                 value={formData.quantidade}
                 onChange={(e) => handleInputChange('quantidade', e.target.value)}
+                isInvalid={formErrors.quantidade}
               />
             </Form.Group>
           </Form>
         </Modal.Body>
-        <Modal.Footer>
+        <Modal.Footer style={{ backgroundColor: '#CCCCCC' }}>
           <Button variant="secondary" onClick={resetForm}>Cancelar</Button>
           <Button variant="success" onClick={handleAddPaciente}>
             {editMode ? 'Editar' : 'Salvar'}
@@ -282,12 +329,14 @@ export default CadastrarPaciente;
 const styles = {
   container: {
     padding: '20px',
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#78C2FF',
+    //'#f5f5f5'
   },
   title: {
     fontSize: '22px',
     fontWeight: 'bold',
     marginBottom: '20px',
+  
   },
   buttonContainer: {
     display: 'flex',  
@@ -300,7 +349,27 @@ const styles = {
     padding: '10px',
     borderRadius: '5px',
     marginBottom: '20px',
+    position: 'relative',
+    left: '510px',
   },
+  addImg: {
+    position: 'relative',
+    left: '470px',
+    height: '420px', 
+    width: '287px', 
+    
+  },
+  paragrobaixo: {
+    fontSize: '16px',
+    color: '#333',
+    marginBottom: '10px',
+    textAlign: 'center',
+    backgroundColor: '#f9f9f9',
+    padding: '10px',
+    borderRadius: '5px',
+  },
+
+
   locationText: {
     fontSize: '16px',
     fontWeight: 'bold',
