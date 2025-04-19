@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Button, Modal, Form, Card, ListGroup, Alert } from 'react-bootstrap';
 import { useNavigate, useParams } from 'react-router-dom';
+import PesquisaPaciente from './PesquisaPaciente';
 
 const CadastrarPaciente = () => {
   const [pacientes, setPacientes] = useState([]);
@@ -21,7 +22,7 @@ const CadastrarPaciente = () => {
   });
   const [modalVisible, setModalVisible] = useState(false);
   const [editMode, setEditMode] = useState(false);
-  const [location, setLocation] = useState('');
+  const pacienteRefs = useRef({}); // Referência para rolar até a área do paciente selecionado
   const navigate = useNavigate();
   const { id } = useParams();
 
@@ -30,7 +31,6 @@ const CadastrarPaciente = () => {
     if (id) {
       loadPaciente(id);
     }
-    getLocation();
   }, [id]);
 
   const loadPacientes = async () => {
@@ -196,28 +196,21 @@ const CadastrarPaciente = () => {
     }
     setModalVisible(true);
   };
-
-  
-  const renderPaciente = (paciente) => (
-    <Card className="mb-3" style={styles.pacienteCard} key={paciente.id} onClick={() => openModal(paciente)}>
-      <Card.Body>
-        <Card.Title>Nome: <span style={{ color: '#0066cc' }}>{paciente.nome}</span></Card.Title>
-        <Card.Text>Medicamento: <span style={{ color: '#0066cc' }}>{paciente.medicamento}</span></Card.Text>
-        <Card.Text>Quantidade: <span style={{ color: '#0066cc' }}>{paciente.quantidade}</span></Card.Text>
-        <Card.Text>Número do Cartão SUS: <span style={{ color: '#0066cc' }}>{paciente.numeroCartaoSUS}</span></Card.Text>
-        <Card.Text>Identidade: <span style={{ color: '#0066cc' }}>{paciente.identidade}</span></Card.Text>
-      </Card.Body>
-    </Card>
-  );
-  
-  
+ 
+  const handleSelectPaciente = (paciente) => {
+    setFormData(paciente);
+    // Rola até o nome do paciente clicado
+    if (pacienteRefs.current[paciente.id]) {
+      pacienteRefs.current[paciente.id].scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
 
   return (
     <div className="container" style={styles.container}>
       <h2 style={styles.title}>Lista de Pacientes</h2>
-      <div className="mb-3">
-        <span style={styles.locationText}>Localização: {location || 'Obtendo localização...'}</span>
-      </div>
+      {/* Componente PesquisaPaciente passando a lista de pacientes */}
+      <PesquisaPaciente pacientes={pacientes} onSelectPaciente={handleSelectPaciente} />
+
       <div className="button-container">
         <Button variant="primary" onClick={() => openModal()} style={styles.addButton}>
            Cadastrar Paciente
@@ -231,13 +224,31 @@ const CadastrarPaciente = () => {
       {pacientes.length === 0 ? (
         <Alert variant="info" style={styles.emptyText}>Nenhum paciente cadastrado.</Alert>
       ) : (
+      
         <ListGroup>
-          {pacientes.map(renderPaciente)}
+          {pacientes.map((paciente) => (
+            <ListGroup.Item
+              key={paciente.id}
+              style={styles.listGroupItem} // Aplica o estilo azul entre os cards e remove a linha branca
+              onClick={() => handleSelectPaciente(paciente)} // Passa o paciente selecionado
+              ref={(el) => pacienteRefs.current[paciente.id] = el} // Cria uma referência dinâmica para cada paciente
+            >
+              {/* Aqui você pode adicionar o conteúdo que deseja exibir dentro do ListGroup.Item, por exemplo: */}
+               <Card className="mb-3" style={styles.pacienteCard} key={paciente.id} onClick={() => openModal(paciente)}>
+                <Card.Body>
+                  <Card.Title>Nome: <span style={{ color: '#0066cc' }}>{paciente.nome}</span></Card.Title>
+                  <Card.Text>Medicamento: <span style={{ color: '#0066cc' }}>{paciente.medicamento}</span></Card.Text>
+                  <Card.Text>Quantidade: <span style={{ color: '#0066cc' }}>{paciente.quantidade}</span></Card.Text>
+                  <Card.Text>Número do Cartão SUS: <span style={{ color: '#0066cc' }}>{paciente.numeroCartaoSUS}</span></Card.Text>
+                  <Card.Text>Identidade: <span style={{ color: '#0066cc' }}>{paciente.identidade}</span></Card.Text>
+                </Card.Body>
+              </Card>
+            </ListGroup.Item>
+          ))}
         </ListGroup>
       )}
 
-      {/* Modal for Adding/Editing Pacientes */}
-      <Modal  show={modalVisible} onHide={resetForm}>
+      <Modal show={modalVisible} onHide={resetForm}>
         <Modal.Header style={{ backgroundColor: '#CCCCCC', padding: '20px', borderRadius: '8px' }} closeButton>
           <Modal.Title style={{ backgroundColor: '#CCCCCC' }}>{editMode ? 'Editar Paciente' : 'Adicionar Paciente'}</Modal.Title>
         </Modal.Header>
@@ -285,7 +296,6 @@ const CadastrarPaciente = () => {
                 </Form.Control.Feedback>
               )}
             </Form.Group>
-
 
             <Form.Group className="mb-3" controlId="medicamento">
               <Form.Label style={{ color: '#000000' }}>Medicamento</Form.Label>
@@ -351,6 +361,7 @@ const styles = {
     marginBottom: '20px',
     position: 'relative',
     left: '510px',
+    top: '5px'
   },
   addImg: {
     position: 'relative',
@@ -392,6 +403,8 @@ const styles = {
     borderRadius: '5px',
     marginBottom: '10px',
     boxShadow: '0 2px 3px rgba(0, 0, 0, 0.2)',
+    border: '1px solid #78C2FF', // Borda azul suave
+    Color: 'transparent', // Fundo transparente (se necessário)
   },
   pacienteTitulo: {
     fontSize: '18px',
@@ -402,5 +415,12 @@ const styles = {
     color: 'blue',
     fontSize: '16px',
     fontWeight: '500',
+  },
+  listGroupItem: {
+    backgroundColor: '#78C2FF', // Azul entre os cards
+    marginBottom: '0px', // Ajuste de margem entre os cards
+    padding: '0px', // Remove o preenchimento extra
+    border: 'none', // Remove a borda extra
+    borderRadius: '8px', // Borda arredondada entre os cards
   },
 };
