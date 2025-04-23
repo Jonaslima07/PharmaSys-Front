@@ -218,7 +218,7 @@ const CadastrarPaciente = () => {
 
         <p style={styles.paragrobaixo}>Faça seu cadastro aqui clicando no botão de cadastrar para poder dispensar seu medicamento!</p>
 
-        <img src="images/hospitalpaciente.jpeg" alt="Imagem do Carrossel" style={styles.addImg} />
+        <img src="images/medico.jpg" alt="Imagem do Carrossel" style={styles.addImg} />
       </div>
 
       {pacientes.length === 0 ? (
@@ -339,7 +339,8 @@ export default CadastrarPaciente;
 const styles = {
   container: {
     padding: '20px',
-    backgroundColor: '#78C2FF',
+    // backgroundColor: '#78C2FF',
+    backgroundColor: '#fff'
     //'#f5f5f5'
   },
   title: {
@@ -367,7 +368,7 @@ const styles = {
     position: 'relative',
     left: '470px',
     height: '420px', 
-    width: '287px', 
+    width: '387px', 
     
   },
   paragrobaixo: {
