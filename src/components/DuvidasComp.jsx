@@ -90,6 +90,7 @@ const styles = {
     backgroundColor: '#000000',
     color: 'white',
     borderRadius: '10px',
+    height: '220px',
   },
   arrowIcon: {
     width: '16px', // Reduzindo o tamanho da seta
