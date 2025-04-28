@@ -1,6 +1,7 @@
 import React from 'react';
 import { Container, Button, ListGroup, Card, Row, Col, Carousel } from 'react-bootstrap';
 import './home.css';
+import DuvidasComp from '../components/DuvidasComp';
 
 const PaginaInicial = () => {
   return (
@@ -81,6 +82,8 @@ const PaginaInicial = () => {
           </Row>
         </Container>
       </section>
+      
+      <DuvidasComp/>
 
       <hr className="my-5" />
 
@@ -104,13 +107,13 @@ const PaginaInicial = () => {
                   <div className="icon-square bg-primary text-white me-3">
                     <i className="fas fa-phone-alt"></i>
                   </div>
-                  Tel: +55 (11) 98765-4321
+                  Tel: +55 (83) 99314-3978
                 </ListGroup.Item>
                 <ListGroup.Item>
                   <div className="icon-square bg-primary text-white me-3">
                     <i className="fas fa-map-marker-alt"></i>
                   </div>
-                  Endereço: Rua dos Medicamentos, 123, São Paulo, SP
+                  Endereço: Rua Humberto Pinto Aranha, 275, Guarabira, PB
                 </ListGroup.Item>
                 <ListGroup.Item>
                   <div className="icon-square bg-primary text-white me-3">
@@ -135,15 +138,17 @@ const PaginaInicial = () => {
 
             <Col md={6}>
               <div className="map">
-                <iframe
-                  src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d14624.019389302695!2d-46.67223816085882!3d-23.532681703229055!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x94ce591b555a04f5%3A0x49614f62b4e5f9a9!2sRua%20dos%20Medicamentos%2C%20123%20-%20Vila%20Matilde%2C%20S%C3%A3o%20Paulo%20-%20SP%2C%2003001-020%2C%20Brasil!5e0!3m2!1spt-BR!2sus!4v1641189625728!5m2!1spt-BR!2sus"
-                  width="100%"
-                  height="200px"
-                  style={{ border: 0 }}
-                  allowFullScreen=""
-                  loading="lazy"
-                  title="Localização PharmaSys"
-                ></iframe>
+                  <iframe
+                    src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3961.3174524256706!2d-35.485936425243615!3d-6.852498993145819!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x7adb6aa1f558467%3A0x71cf6fbed1bbfa24!2sR.%20Humberto%20P.%20Aranha%2C%20275%20-%20Nordeste%20I%2C%20Guarabira%20-%20PB%2C%2058200-000!5e0!3m2!1spt-BR!2sbr!4v1745810054547!5m2!1spt-BR!2sbr"
+                    width="100%"
+                    height="250"
+                    style={{ border: 0 }}
+                    allowFullScreen=""
+                    loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade"
+                    title="Localização Rua Humberto P. Aranha"
+                  ></iframe>
+            
               </div>
             </Col>
           </Row>
