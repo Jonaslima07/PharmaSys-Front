@@ -8,6 +8,7 @@ import CriarConta from './views/CriarConta.jsx';  // Comentei temporariamente
 // import LojaCategoria from './components/LojaCategoria.jsx';  // Comentei temporariamente
 import Login from './views/Login.jsx';  // Comentei temporariamente
 import NoPage from './views/NoPage.jsx';  // Este ainda vai ser usado para a rota de erro
+import CadastroDlotes from './views/CadastroDlotes.jsx';  // Este ainda vai ser usado para a rota de erro
 
 function App() {
   const router = createBrowserRouter([
@@ -38,7 +39,7 @@ function App() {
         },
         {
           path: 'cadastrarlotes',
-          // element: <CadastroDlotes />,  // Comentei temporariamente
+           element: <CadastroDlotes />,  // Comentei temporariamente
         },
       ],
     },

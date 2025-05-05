@@ -40,5 +40,57 @@
       "medicamento": "acilodaximpam",
       "quantidade": "10"
     }
+  ],
+  "lotes": [
+    {
+      "number": "A12366",
+      "expirationDate": "2025-12-31",
+      "manufacturer": "Laboratório XYZ",
+      "quantity": 1003,
+      "medicationName": "Dipirona",
+      "medicationImage": "/images/dipirona.jpg",
+      "manufacturingDate": "2025-01-01",
+      "id": "1"
+    },
+    {
+      "id": "2",
+      "number": "B456",
+      "expirationDate": "2026-06-30",
+      "manufacturer": "Laboratório ABC",
+      "quantity": 500,
+      "medicationName": "Dipirona",
+      "medicationImage": "/images/dipirona.jpg",
+      "manufacturingDate": "2025-02-01"
+    },
+    {
+      "id": "3",
+      "number": "C789",
+      "expirationDate": "2025-05-20",
+      "manufacturer": "Laboratório DEF",
+      "quantity": 300,
+      "medicationName": "Acilodaximpam",
+      "medicationImage": "/images/medicamento3.jpg",
+      "manufacturingDate": "2025-03-15"
+    },
+    {
+      "number": "34343434",
+      "expirationDate": "2025-09-26",
+      "manufacturer": "Laboratório XYZ",
+      "quantity": 1110,
+      "medicationName": "Diazepam",
+      "medicationImage": null,
+      "manufacturingDate": "2025-05-22",
+      "id": "1fd5"
+    },
+    {
+      "id": "6520",
+      "number": "A123667666666",
+      "expirationDate": "2026-01-01",
+      "manufacturer": "Laboratório XYZ",
+      "quantity": 26,
+      "medicationName": "paracetamol",
+      "medicationImage": null,
+      "manufacturingDate": "2025-05-31"
+    }
   ]
 }
