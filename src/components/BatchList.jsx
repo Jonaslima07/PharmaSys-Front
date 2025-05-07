@@ -1,30 +1,40 @@
 import React, { useState, useEffect } from 'react';
-import { FaEdit, FaTrashAlt } from 'react-icons/fa';
+import { FaEdit, FaTrashAlt, FaCheck, FaPlus } from 'react-icons/fa';
 import BatchForm from './BatchForm';
+import './BatchList.css';
 
 const BatchList = () => {
   const [batches, setBatches] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [selectedBatch, setSelectedBatch] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     loadBatches();
   }, []);
 
   const loadBatches = async () => {
+    setIsLoading(true);
+    setError(null);
     try {
       const response = await fetch('http://localhost:5000/lotes');
+      if (!response.ok) {
+        throw new Error(`Erro HTTP! status: ${response.status}`);
+      }
       const data = await response.json();
       setBatches(data);
     } catch (error) {
       console.error('Erro ao carregar os lotes', error);
-      alert('Erro ao carregar os lotes.');
+      setError('Erro ao carregar os lotes. Tente novamente mais tarde.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleAddBatch = () => {
-    setSelectedBatch(null); // Reset para novo lote
+    setSelectedBatch(null);
     setShowForm(true);
   };
 
@@ -36,7 +46,38 @@ const BatchList = () => {
   const handleFormClose = () => {
     setShowForm(false);
     setSelectedBatch(null);
-    loadBatches(); // Recarrega a lista após fechar o formulário
+    loadBatches();
+  };
+
+  const handleFormSubmit = async (batchData) => {
+    try {
+      setIsLoading(true);
+      const url = batchData.id 
+        ? `http://localhost:5000/lotes/${batchData.id}`
+        : 'http://localhost:5000/lotes';
+      
+      const method = batchData.id ? 'PUT' : 'POST';
+      
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(batchData),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Erro HTTP! status: ${response.status}`);
+      }
+
+      // Fecha o formulário e recarrega os dados
+      handleFormClose();
+    } catch (error) {
+      console.error('Erro ao salvar o lote', error);
+      alert('Erro ao salvar o lote. Tente novamente.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const filteredBatches = batches.filter(
@@ -60,252 +101,168 @@ const BatchList = () => {
         loadBatches();
       } catch (error) {
         console.error('Erro ao excluir o lote', error);
-        alert('Erro ao excluir o lote');
+        alert('Erro ao excluir o lote. Tente novamente.');
       }
     }
   };
 
-  return (
-    <div style={styles.batchList}>
-      <h2 style={styles.heading}>Controle de Lotes</h2>
-      <p style={styles.paragraph}>Gerencie os lotes de medicamentos do seu estoque</p>
+  const formatDate = (dateString) => {
+    if (!dateString) return '-';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+  };
 
-      <div style={styles.searchBar}>
-        <input
-          type="text"
-          placeholder="Buscar por código, fabricante..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          style={styles.input}
-        />
-        <button
-          onClick={handleAddBatch}
-          style={styles.btnNovoLote}
-        >
-          Novo Lote
+  const formatManufactureDate = (dateString) => {
+    if (!dateString) return '-';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+  };
+
+  const calculateStatus = (expirationDate) => {
+    if (!expirationDate) return 'A vencer';
+    
+    const today = new Date();
+    const expDate = new Date(expirationDate);
+    return expDate < today ? 'Vencido' : 'A vencer';
+  };
+
+  const getStatusStyle = (status) => {
+    return status === 'Vencido' 
+      ? { backgroundColor: '#f12f11', color: '#0000000' } 
+      : { backgroundColor: '#78C2FF', color: '#000000' };
+  };
+
+  if (isLoading) {
+    return (
+      <div className="loading-container">
+        <div className="spinner"></div>
+        <p>Carregando lotes...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="error-container">
+        <p className="error-message">{error}</p>
+        <button onClick={loadBatches} className="btn-retry">
+          Tentar novamente
         </button>
       </div>
+    );
+  }
 
-      {showForm && (
-        <BatchForm 
-          batch={selectedBatch} 
-          onClose={handleFormClose} 
-          onSave={handleFormClose}
-        />
-      )}
+  return (
+    <div className="batch-list-container">
+      <h1>Controle de Lotes</h1>
+      <p className="subtitle">Gerencie os lotes de medicamentos do seu estoque</p>
 
-      <table style={styles.table}>
-        <thead>
-          <tr>
-            <th style={styles.tableHeader}>Medicamento</th>
-            <th style={styles.tableHeader}>Código</th>
-            <th style={styles.tableHeader}>Fabricante</th>
-            <th style={styles.tableHeader}>Qtd.</th>
-            <th style={styles.tableHeader}>Data de Validade</th>
-            <th style={styles.tableHeader}>Ações</th>
-          </tr>
-        </thead>
-        <tbody>
-          {filteredBatches.map((batch) => (
-            <tr key={batch.id} style={styles.tableRow}>
-              <td style={styles.tableData}>{batch.medicationName}</td>
-              <td style={styles.tableData}>{batch.number}</td>
-              <td style={styles.tableData}>{batch.manufacturer}</td>
-              <td style={styles.tableData}>{batch.quantity}</td>
-              <td style={styles.tableData}>
-                {new Date(batch.expirationDate).toLocaleDateString()}
-              </td>
-              <td style={styles.tableData}>
-                <button 
-                  onClick={() => handleEditBatch(batch)}
-                  style={styles.btnEditar}
-                >
-                  <FaEdit size={18} />
-                </button>
-                <button
-                  onClick={() => handleDelete(batch.id)}
-                  style={styles.btnExcluir}
-                >
-                  <FaTrashAlt size={18} />
-                </button>
+      <div className="batch-content">
+        <h2>Lotes de Medicamentos</h2>
+        
+        <div className="batch-actions">
+          <input
+            type="text"
+            placeholder="Buscar por código, fabricante..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+          <button onClick={handleAddBatch} className="btn-add">
+            <FaPlus /> Novo Lote
+          </button>
+        </div>
+
+        {showForm && (
+          <BatchForm 
+            batch={selectedBatch} 
+            onClose={handleFormClose} 
+            onSubmit={handleFormSubmit}
+            isSubmitting={isLoading}
+          />
+        )}
+
+        {/* Adicione esta condição para mostrar a imagem quando não há lotes */}
+        {batches.length === 0 && !isLoading && !error && (
+          <div className="empty-state">
+            <img src="images/muiedacartela.jpg" alt="Nenhum lote cadastrado" />
+            <p>Nenhum lote cadastrado ainda. Clique em "Novo Lote" para começar!</p>
+          </div>
+        )}
+
+        <div className="table-container">
+          {filteredBatches.length > 0 ? (
+            <table>
+              <thead>
+                <tr>
+                  <th>Número do Lote</th>
+                  <th>Medicamento</th>
+                  <th>Fabricante</th>
+                  <th>Validade</th>
+                  <th>Quantidade</th>
+                  <th>Status</th>
+                  <th>Data de Fabricação</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredBatches.map((batch) => {
+                  const status = calculateStatus(batch.expirationDate);
+                  return (
+                    <tr key={batch.id}>
+                      <td>{batch.number || '-'}</td>
+                      <td>{batch.medicationName || '-'}</td>
+                      <td>{batch.manufacturer || '-'}</td>
+                      <td>{formatDate(batch.expirationDate)}</td>
+                      <td>{batch.quantity || '0'}</td>
+                      <td>
+                        <span className="status-badge" style={getStatusStyle(status)}>
+                          {status}
+                        </span>
+                      </td>
+                      <td>{formatManufactureDate(batch.manufacturingDate)}</td>
+                      <td>
+                        <button 
+                          onClick={() => handleEditBatch(batch)}
+                          className="btn-action btn-edit"
+                          title="Editar"
+                        >
+                          <FaEdit />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(batch.id)}
+                          className="btn-action btn-delete"
+                          title="Excluir"
+                        >
+                          <FaTrashAlt />
+                        </button>
+                        <button className="btn-action btn-check">
+                          <FaCheck />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          ) : batches.length > 0 ? (
+            <tr>
+              <td colSpan="8" className="no-results">
+                Nenhum lote encontrado para sua busca
               </td>
             </tr>
-          ))}
-        </tbody>
-      </table>
-       <style>
-        {`
-          .batch-list {
-            padding: 20px;
-            font-family: Arial, sans-serif;
-            background-color: #f9f9f9;
-          }
-
-          h2 {
-            font-size: 28px;
-            margin-bottom: 5px;
-            color: #333;
-          }
-
-          p {
-            font-size: 14px;
-            color: #777;
-          }
-
-          .search-bar {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 20px;
-          }
-
-          input {
-            padding: 10px;
-            width: 70%;
-            border-radius: 4px;
-            border: 1px solid #ccc;
-            font-size: 14px;
-          }
-
-          button {
-            padding: 10px 20px;
-            font-size: 14px;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-          }
-
-          .btn-novo-lote {
-            background-color: #007bff;
-          }
-
-          .btn-novo-lote:hover {
-            background-color: #0056b3;
-          }
-
-          table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-          }
-
-          table, th, td {
-            border: 1px solid #ddd;
-          }
-
-          th, td {
-            padding: 10px;
-            text-align: left;
-          }
-
-          th {
-            background-color: #4e73df;
-            color: white;
-          }
-
-          tr:nth-child(even) {
-            background-color: #f4f4f4;
-          }
-
-          .btn-editar {
-            background-color: #28a745;
-            margin-right: 10px;
-          }
-
-          .btn-editar a {
-            color: white;
-            text-decoration: none;
-          }
-
-          .btn-editar:hover {
-            background-color: #218838;
-          }
-
-          .btn-excluir {
-            background-color: #dc3545;
-          }
-
-          .btn-excluir:hover {
-            background-color: #c82333;
-          }
-        `}
-      </style>
+          ) : null}
+        </div>
+      </div>
     </div>
   );
 };
 
 export default BatchList;
-
-// Constante de estilos inline
-const styles = {
-  batchList: {
-    padding: '20px',
-    fontFamily: 'Arial, sans-serif',
-    backgroundColor: '#f9f9f9',
-  },
-  heading: {
-    fontSize: '28px',
-    marginBottom: '5px',
-    color: '#333',
-  },
-  paragraph: {
-    fontSize: '14px',
-    color: '#777',
-  },
-  searchBar: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    marginBottom: '20px',
-  },
-  input: {
-    padding: '10px',
-    width: '70%',
-    borderRadius: '4px',
-    border: '1px solid #ccc',
-    fontSize: '14px',
-  },
-  btnNovoLote: {
-    padding: '10px 20px',
-    fontSize: '14px',
-    color: 'white',
-    border: 'none',
-    borderRadius: '4px',
-    backgroundColor: '#007bff',
-    cursor: 'pointer',
-  },
-  table: {
-    width: '100%',
-    borderCollapse: 'collapse',
-    marginTop: '20px',
-  },
-  tableHeader: {
-    padding: '10px',
-    textAlign: 'left',
-    backgroundColor: '#4e73df',
-    color: 'white',
-  },
-  tableRow: {
-    backgroundColor: '#fff',
-  },
-  tableData: {
-    padding: '10px',
-    textAlign: 'left',
-  },
-  btnEditar: {
-    padding: '5px 10px',
-    backgroundColor: '#28a745',
-    color: 'white',
-    border: 'none',
-    borderRadius: '4px',
-    cursor: 'pointer',
-    marginRight: '10px',
-  },
-  btnExcluir: {
-    padding: '5px 10px',
-    backgroundColor: '#dc3545',
-    color: 'white',
-    border: 'none',
-    borderRadius: '4px',
-    cursor: 'pointer',
-  },
-};
