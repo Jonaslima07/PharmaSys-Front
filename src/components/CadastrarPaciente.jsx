@@ -248,7 +248,7 @@ const CadastrarPaciente = () => {
         </ListGroup>
       )}
 
-      <Modal show={modalVisible} onHide={resetForm}>
+      <Modal show={modalVisible} onHide={resetForm} >
         <Modal.Header style={{ backgroundColor: '#CCCCCC', padding: '20px', borderRadius: '8px' }} closeButton>
           <Modal.Title style={{ backgroundColor: '#CCCCCC' }}>{editMode ? 'Editar Paciente' : 'Adicionar Paciente'}</Modal.Title>
         </Modal.Header>
@@ -322,7 +322,7 @@ const CadastrarPaciente = () => {
         </Modal.Body>
         <Modal.Footer style={{ backgroundColor: '#CCCCCC' }}>
           <Button variant="secondary" onClick={resetForm}>Cancelar</Button>
-          <Button variant="success" onClick={handleAddPaciente}>
+          <Button variant="primary" onClick={handleAddPaciente}>
             {editMode ? 'Editar' : 'Salvar'}
           </Button>
           {editMode && (

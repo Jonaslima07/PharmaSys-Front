@@ -9,10 +9,10 @@ const BatchForm = ({ batch, onClose, onSave }) => {
     manufacturer: '',
     quantity: 0,
     medicationName: '',
-    medicationImage: '',
+    medicationImage: '', // URL da imagem que será salva
     manufacturingDate: '',
   });
-  
+
   const [formErrors, setFormErrors] = useState({
     medicationName: false,
     number: false,
@@ -40,7 +40,7 @@ const BatchForm = ({ batch, onClose, onSave }) => {
       setFormData({
         ...batch,
         expirationDate: formatDate(batch.expirationDate),
-        manufacturingDate: formatDate(batch.manufacturingDate)
+        manufacturingDate: formatDate(batch.manufacturingDate),
       });
     } else {
       const today = new Date().toISOString().split('T')[0];
@@ -60,7 +60,7 @@ const BatchForm = ({ batch, onClose, onSave }) => {
   const saveBatch = async (batchData) => {
     setIsLoading(true);
     setErrorMessage('');
-    
+
     try {
       const isEdit = !!batchData.id;
       const endpoint = isEdit 
@@ -85,22 +85,18 @@ const BatchForm = ({ batch, onClose, onSave }) => {
         quantity: Number(batchData.quantity) || 0,
         medicationName: batchData.medicationName,
         medicationImage: batchData.medicationImage || null,
-        manufacturingDate: batchData.manufacturingDate
+        manufacturingDate: batchData.manufacturingDate,
       };
-
-      console.log('Enviando payload:', payload); // Debug
 
       const response = await fetch(endpoint, {
         method: isEdit ? 'PUT' : 'POST',
         headers: { 
           'Content-Type': 'application/json',
-          'Accept': 'application/json'
+          'Accept': 'application/json',
         },
-        mode: 'cors', // Adicione esta linha
+        mode: 'cors', 
         body: JSON.stringify(payload),
       });
-
-      console.log('Resposta do servidor:', response); // Debug
 
       if (!response.ok) {
         let errorData;
@@ -113,17 +109,14 @@ const BatchForm = ({ batch, onClose, onSave }) => {
       }
 
       const result = await response.json();
-      console.log('Resultado:', result); // Debug
       return result;
     } catch (error) {
-      console.error('Erro detalhado ao salvar o lote:', error);
       setErrorMessage(error.message || 'Erro ao salvar o lote');
       throw error;
     } finally {
       setIsLoading(false);
     }
   };
-
 
   const handleInputChange = (name, value) => {
     setFormData(prev => ({ ...prev, [name]: value }));
@@ -132,7 +125,7 @@ const BatchForm = ({ batch, onClose, onSave }) => {
   const handleSubmit = async () => {
     const manufacturingDate = new Date(formData.manufacturingDate);
     const expirationDate = new Date(formData.expirationDate);
-    
+
     const errors = {
       medicationName: !formData.medicationName.trim(),
       number: !formData.number.trim(),
@@ -140,7 +133,7 @@ const BatchForm = ({ batch, onClose, onSave }) => {
       quantity: formData.quantity <= 0,
       expirationDate: manufacturingDate >= expirationDate,
     };
-    
+
     setFormErrors(errors);
 
     if (Object.values(errors).some(error => error)) {
@@ -150,8 +143,23 @@ const BatchForm = ({ batch, onClose, onSave }) => {
 
     try {
       const batchToSave = { ...formData };
-      
-      
+
+      // Se houver uma imagem no campo de imagem
+      if (formData.medicationImage) {
+        const formDataImage = new FormData();
+        formDataImage.append("file", formData.medicationImage);
+        formDataImage.append("upload_preset", "your_preset_here"); // Substitua pelo seu preset do Cloudinary
+
+        // Enviar imagem para o Cloudinary
+        const response = await fetch('https://api.cloudinary.com/v1_1/your_cloud_name/image/upload', {
+          method: 'POST',
+          body: formDataImage,
+        });
+
+        const data = await response.json();
+        batchToSave.medicationImage = data.secure_url; // Adiciona o link da imagem no payload
+      }
+
       await saveBatch(batchToSave);
       onSave(); // Fecha o formulário e atualiza a lista
     } catch (error) {
@@ -160,20 +168,20 @@ const BatchForm = ({ batch, onClose, onSave }) => {
   };
 
   return (
-    <Modal show={true} onHide={onClose} size="lg">
-      <Modal.Header closeButton className="bg-primary text-white">
-        <Modal.Title>{formData.id ? 'Editar Lote' : 'Adicionar Lote'}</Modal.Title>
+    <Modal  show={true} onHide={onClose}>
+      <Modal.Header style={{ backgroundColor: '#CCCCCC', padding: '20px', borderRadius: '8px' }} closeButton>
+        <Modal.Title style={{ backgroundColor: '#CCCCCC' }}>{formData.id ? 'Editar Lote' : 'Adicionar Lote'}</Modal.Title>
       </Modal.Header>
-      <Modal.Body>
+      <Modal.Body style={{ backgroundColor: '#CCCCCC' }}>
         {errorMessage && (
           <div className="alert alert-danger" role="alert">
             {errorMessage}
           </div>
         )}
-        
-        <Form>
+
+        <Form style={{ backgroundColor: '#CCCCCC', padding: '20px', borderRadius: '8px' }}>
           <Form.Group className="mb-3" controlId="medicationName">
-            <Form.Label>Nome do Medicamento</Form.Label>
+            <Form.Label style={{ color: '#000000' }}>Nome do Medicamento</Form.Label>
             <Form.Control
               type="text"
               placeholder="Digite o nome do medicamento"
@@ -181,13 +189,13 @@ const BatchForm = ({ batch, onClose, onSave }) => {
               onChange={(e) => handleInputChange('medicationName', e.target.value)}
               isInvalid={formErrors.medicationName}
             />
-            <Form.Control.Feedback type="invalid">
+            <Form.Control.Feedback type="invalid" style={{ marginTop: '-16px', fontSize: '14px', color: '#dc3545' }}>
               Por favor, informe o nome do medicamento
             </Form.Control.Feedback>
           </Form.Group>
 
           <Form.Group className="mb-3" controlId="number">
-            <Form.Label>Código do Lote</Form.Label>
+            <Form.Label  style={{ color: '#000000' }}>Código do Lote</Form.Label>
             <Form.Control
               type="text"
               placeholder="Digite o código do lote"
@@ -195,13 +203,13 @@ const BatchForm = ({ batch, onClose, onSave }) => {
               onChange={(e) => handleInputChange('number', e.target.value)}
               isInvalid={formErrors.number}
             />
-            <Form.Control.Feedback type="invalid">
+            <Form.Control.Feedback type="invalid" style={{ marginTop: '-16px', fontSize: '14px', color: '#dc3545' }}>
               Por favor, informe o código do lote
             </Form.Control.Feedback>
           </Form.Group>
 
           <Form.Group className="mb-3" controlId="manufacturer">
-            <Form.Label>Fabricante</Form.Label>
+            <Form.Label style={{ color: '#000000' }}>Fabricante</Form.Label>
             <Form.Control
               type="text"
               placeholder="Digite o fabricante"
@@ -209,13 +217,13 @@ const BatchForm = ({ batch, onClose, onSave }) => {
               onChange={(e) => handleInputChange('manufacturer', e.target.value)}
               isInvalid={formErrors.manufacturer}
             />
-            <Form.Control.Feedback type="invalid">
+            <Form.Control.Feedback type="invalid" style={{ marginTop: '-16px', fontSize: '14px', color: '#dc3545' }}>
               Por favor, informe o fabricante
             </Form.Control.Feedback>
           </Form.Group>
 
           <Form.Group className="mb-3" controlId="quantity">
-            <Form.Label>Quantidade</Form.Label>
+            <Form.Label style={{ color: '#000000' }}>Quantidade</Form.Label>
             <Form.Control
               type="number"
               min="0"
@@ -224,13 +232,13 @@ const BatchForm = ({ batch, onClose, onSave }) => {
               onChange={(e) => handleInputChange('quantity', parseInt(e.target.value) || 0)}
               isInvalid={formErrors.quantity}
             />
-            <Form.Control.Feedback type="invalid">
+            <Form.Control.Feedback type="invalid"  style={{ marginTop: '-16px', fontSize: '14px', color: '#dc3545' }}>
               A quantidade deve ser maior que zero
             </Form.Control.Feedback>
           </Form.Group>
 
           <Form.Group className="mb-3" controlId="manufacturingDate">
-            <Form.Label>Data de Fabricação</Form.Label>
+            <Form.Label style={{ color: '#000000' }}>Data de Fabricação</Form.Label>
             <Form.Control
               type="date"
               value={formData.manufacturingDate}
@@ -239,26 +247,35 @@ const BatchForm = ({ batch, onClose, onSave }) => {
           </Form.Group>
 
           <Form.Group className="mb-3" controlId="expirationDate">
-            <Form.Label>Data de Validade</Form.Label>
+            <Form.Label style={{ color: '#000000' }}>Data de Validade</Form.Label>
             <Form.Control
               type="date"
               value={formData.expirationDate}
               onChange={(e) => handleInputChange('expirationDate', e.target.value)}
               isInvalid={formErrors.expirationDate}
             />
-            <Form.Control.Feedback type="invalid">
+            <Form.Control.Feedback type="invalid"  style={{ marginTop: '-16px', fontSize: '14px', color: '#dc3545' }}>
               A data de validade deve ser posterior à data de fabricação
             </Form.Control.Feedback>
           </Form.Group>
+
+          <Form.Group className="mb-3" controlId="medicationImage">
+            <Form.Label style={{ color: '#000000' }}>Imagem do Medicamento</Form.Label>
+            <Form.Control
+              type="file"
+              accept="image/*"
+              onChange={(e) => handleInputChange('medicationImage', e.target.files[0])}
+            />
+          </Form.Group>
         </Form>
       </Modal.Body>
-      <Modal.Footer>
+      <Modal.Footer style={{ backgroundColor: '#CCCCCC' }}>
         <Button variant="secondary" onClick={onClose} disabled={isLoading}>
           Cancelar
         </Button>
         <Button 
           variant="primary" 
-          onClick={handleSubmit}
+          onClick={handleSubmit} 
           disabled={isLoading}
         >
           {isLoading ? 'Salvando...' : formData.id ? 'Atualizar' : 'Salvar'} Lote
@@ -269,6 +286,7 @@ const BatchForm = ({ batch, onClose, onSave }) => {
 };
 
 export default BatchForm;
+
 
 const styles = {
   container: {
@@ -281,7 +299,7 @@ const styles = {
     marginBottom: '20px',
   },
   form: {
-    backgroundColor: '#f9f9f9',
+    backgroundColor: '#CCCCCC',
     padding: '20px',
     borderRadius: '8px',
   },
@@ -289,16 +307,16 @@ const styles = {
     color: '#333',
   },
   modalHeader: {
-    backgroundColor: '#78C2FF',
+    backgroundColor: '#CCCCCC',
     padding: '20px',
     borderRadius: '8px',
   },
   modalBody: {
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#CCCCCC',
     padding: '20px',
   },
   modalFooter: {
-    backgroundColor: '#78C2FF',
+    backgroundColor: '#CCCCCC',
     padding: '10px',
     borderRadius: '8px',
   },

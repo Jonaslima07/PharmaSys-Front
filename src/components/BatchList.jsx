@@ -70,7 +70,6 @@ const BatchList = () => {
         throw new Error(`Erro HTTP! status: ${response.status}`);
       }
 
-      // Fecha o formulário e recarrega os dados
       handleFormClose();
     } catch (error) {
       console.error('Erro ao salvar o lote', error);
@@ -189,7 +188,6 @@ const BatchList = () => {
           />
         )}
 
-        {/* Adicione esta condição para mostrar a imagem quando não há lotes */}
         {batches.length === 0 && !isLoading && !error && (
           <div className="empty-state">
             <img src="images/muiedacartela.jpg" alt="Nenhum lote cadastrado" />
@@ -202,6 +200,7 @@ const BatchList = () => {
             <table>
               <thead>
                 <tr>
+                  <th>Imagem</th> {/* Nova coluna para imagem */}
                   <th>Número do Lote</th>
                   <th>Medicamento</th>
                   <th>Fabricante</th>
@@ -217,6 +216,13 @@ const BatchList = () => {
                   const status = calculateStatus(batch.expirationDate);
                   return (
                     <tr key={batch.id}>
+                      <td>
+                        {batch.medicationImage ? (
+                          <img src={batch.medicationImage} alt={batch.medicationName} style={{ width: 50, height: 50 }} />
+                        ) : (
+                          <span>-</span>
+                        )}
+                      </td> {/* Exibição da imagem */}
                       <td>{batch.number || '-'}</td>
                       <td>{batch.medicationName || '-'}</td>
                       <td>{batch.manufacturer || '-'}</td>
@@ -254,7 +260,7 @@ const BatchList = () => {
             </table>
           ) : batches.length > 0 ? (
             <tr>
-              <td colSpan="8" className="no-results">
+              <td colSpan="9" className="no-results">
                 Nenhum lote encontrado para sua busca
               </td>
             </tr>
