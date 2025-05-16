@@ -3,13 +3,13 @@ import { Button, Form, Modal } from 'react-bootstrap';
 
 const BatchForm = ({ batch, onClose, onSave }) => {
   const [formData, setFormData] = useState({
-    id: null, 
+    id: null,
     number: '',
     expirationDate: '',
     manufacturer: '',
     quantity: 0,
     medicationName: '',
-    medicationImage: '', // URL da imagem que será salva
+    medicationImage: '', // Agora a imagem será em base64
     manufacturingDate: '',
   });
 
@@ -20,6 +20,7 @@ const BatchForm = ({ batch, onClose, onSave }) => {
     quantity: false,
     expirationDate: false,
   });
+  
 
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -45,7 +46,7 @@ const BatchForm = ({ batch, onClose, onSave }) => {
     } else {
       const today = new Date().toISOString().split('T')[0];
       setFormData({
-        id: null, 
+        id: null,
         number: '',
         expirationDate: today,
         manufacturer: '',
@@ -63,38 +64,26 @@ const BatchForm = ({ batch, onClose, onSave }) => {
 
     try {
       const isEdit = !!batchData.id;
-      const endpoint = isEdit 
+      const endpoint = isEdit
         ? `http://localhost:5000/lotes/${batchData.id}`
         : 'http://localhost:5000/lotes';
 
-      // Verifica e formata as datas corretamente
-      const formatDateForServer = (dateString) => {
-        if (!dateString) return null;
-        try {
-          return new Date(dateString).toISOString();
-        } catch (e) {
-          console.error('Erro ao formatar data para servidor:', e);
-          return null;
-        }
-      };
-
       const payload = {
         number: batchData.number,
-        expirationDate: batchData.expirationDate, // json-server lida bem com strings simples
+        expirationDate: batchData.expirationDate,
         manufacturer: batchData.manufacturer,
         quantity: Number(batchData.quantity) || 0,
         medicationName: batchData.medicationName,
-        medicationImage: batchData.medicationImage || null,
+        medicationImage: batchData.medicationImage || null, // A imagem estará em base64
         manufacturingDate: batchData.manufacturingDate,
       };
 
       const response = await fetch(endpoint, {
         method: isEdit ? 'PUT' : 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
-        mode: 'cors', 
         body: JSON.stringify(payload),
       });
 
@@ -122,17 +111,32 @@ const BatchForm = ({ batch, onClose, onSave }) => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData(prev => ({ ...prev, medicationImage: reader.result })); // A imagem será convertida para base64
+      };
+      reader.readAsDataURL(file); // Converte a imagem para base64
+    }
+  };
+
   const handleSubmit = async () => {
-    const manufacturingDate = new Date(formData.manufacturingDate);
-    const expirationDate = new Date(formData.expirationDate);
+     const manufacturingDate = new Date(formData.manufacturingDate + 'T00:00:00'); // Adiciona a hora para garantir que é 00:00 do dia
+     const expirationDate = new Date(formData.expirationDate + 'T00:00:00'); // Adiciona a hora para garantir que é 00:00 do dia
+
+    // Pega apenas a data no formato YYYY-MM-DD para evitar problemas de horário
+    const manufacturingDateString = manufacturingDate.toISOString().split('T')[0]; // data no formato YYYY-MM-DD
+    const expirationDateString = expirationDate.toISOString().split('T')[0]; // data no formato YYYY-MM-DD
 
     const errors = {
       medicationName: !formData.medicationName.trim(),
       number: !formData.number.trim(),
       manufacturer: !formData.manufacturer.trim(),
       quantity: formData.quantity <= 0,
-      expirationDate: manufacturingDate >= expirationDate,
-    };
+       expirationDate: manufacturingDateString >= expirationDateString, // Compara apenas as partes de data
+  };
 
     setFormErrors(errors);
 
@@ -144,22 +148,6 @@ const BatchForm = ({ batch, onClose, onSave }) => {
     try {
       const batchToSave = { ...formData };
 
-      // Se houver uma imagem no campo de imagem
-      if (formData.medicationImage) {
-        const formDataImage = new FormData();
-        formDataImage.append("file", formData.medicationImage);
-        formDataImage.append("upload_preset", "your_preset_here"); // Substitua pelo seu preset do Cloudinary
-
-        // Enviar imagem para o Cloudinary
-        const response = await fetch('https://api.cloudinary.com/v1_1/your_cloud_name/image/upload', {
-          method: 'POST',
-          body: formDataImage,
-        });
-
-        const data = await response.json();
-        batchToSave.medicationImage = data.secure_url; // Adiciona o link da imagem no payload
-      }
-
       await saveBatch(batchToSave);
       onSave(); // Fecha o formulário e atualiza a lista
     } catch (error) {
@@ -168,7 +156,7 @@ const BatchForm = ({ batch, onClose, onSave }) => {
   };
 
   return (
-    <Modal  show={true} onHide={onClose}>
+    <Modal show={true} onHide={onClose}>
       <Modal.Header style={{ backgroundColor: '#CCCCCC', padding: '20px', borderRadius: '8px' }} closeButton>
         <Modal.Title style={{ backgroundColor: '#CCCCCC' }}>{formData.id ? 'Editar Lote' : 'Adicionar Lote'}</Modal.Title>
       </Modal.Header>
@@ -195,7 +183,7 @@ const BatchForm = ({ batch, onClose, onSave }) => {
           </Form.Group>
 
           <Form.Group className="mb-3" controlId="number">
-            <Form.Label  style={{ color: '#000000' }}>Código do Lote</Form.Label>
+            <Form.Label style={{ color: '#000000' }}>Código do Lote</Form.Label>
             <Form.Control
               type="text"
               placeholder="Digite o código do lote"
@@ -232,7 +220,7 @@ const BatchForm = ({ batch, onClose, onSave }) => {
               onChange={(e) => handleInputChange('quantity', parseInt(e.target.value) || 0)}
               isInvalid={formErrors.quantity}
             />
-            <Form.Control.Feedback type="invalid"  style={{ marginTop: '-16px', fontSize: '14px', color: '#dc3545' }}>
+            <Form.Control.Feedback type="invalid" style={{ marginTop: '-16px', fontSize: '14px', color: '#dc3545' }}>
               A quantidade deve ser maior que zero
             </Form.Control.Feedback>
           </Form.Group>
@@ -254,7 +242,7 @@ const BatchForm = ({ batch, onClose, onSave }) => {
               onChange={(e) => handleInputChange('expirationDate', e.target.value)}
               isInvalid={formErrors.expirationDate}
             />
-            <Form.Control.Feedback type="invalid"  style={{ marginTop: '-16px', fontSize: '14px', color: '#dc3545' }}>
+            <Form.Control.Feedback type="invalid" style={{ marginTop: '-16px', fontSize: '14px', color: '#dc3545' }}>
               A data de validade deve ser posterior à data de fabricação
             </Form.Control.Feedback>
           </Form.Group>
@@ -264,7 +252,7 @@ const BatchForm = ({ batch, onClose, onSave }) => {
             <Form.Control
               type="file"
               accept="image/*"
-              onChange={(e) => handleInputChange('medicationImage', e.target.files[0])}
+              onChange={handleImageChange}
             />
           </Form.Group>
         </Form>
@@ -273,9 +261,9 @@ const BatchForm = ({ batch, onClose, onSave }) => {
         <Button variant="secondary" onClick={onClose} disabled={isLoading}>
           Cancelar
         </Button>
-        <Button 
-          variant="primary" 
-          onClick={handleSubmit} 
+        <Button
+          variant="primary"
+          onClick={handleSubmit}
           disabled={isLoading}
         >
           {isLoading ? 'Salvando...' : formData.id ? 'Atualizar' : 'Salvar'} Lote
@@ -286,6 +274,7 @@ const BatchForm = ({ batch, onClose, onSave }) => {
 };
 
 export default BatchForm;
+
 
 
 const styles = {

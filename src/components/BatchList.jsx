@@ -52,7 +52,7 @@ const BatchList = () => {
   const handleFormSubmit = async (batchData) => {
     try {
       setIsLoading(true);
-      const url = batchData.id 
+      const url = batchData.id
         ? `http://localhost:5000/lotes/${batchData.id}`
         : 'http://localhost:5000/lotes';
       
@@ -135,7 +135,7 @@ const BatchList = () => {
 
   const getStatusStyle = (status) => {
     return status === 'Vencido' 
-      ? { backgroundColor: '#f12f11', color: '#0000000' } 
+      ? { backgroundColor: '#f12f11', color: '#000000' } 
       : { backgroundColor: '#78C2FF', color: '#000000' };
   };
 
@@ -218,7 +218,11 @@ const BatchList = () => {
                     <tr key={batch.id}>
                       <td>
                         {batch.medicationImage ? (
-                          <img src={batch.medicationImage} alt={batch.medicationName} style={{ width: 50, height: 50 }} />
+                          <img 
+                            src={batch.medicationImage} 
+                            alt={batch.medicationName} 
+                            style={{ width: 150, height: 150 }} 
+                          />
                         ) : (
                           <span>-</span>
                         )}
