@@ -1,0 +1,177 @@
+/* Estilos Gerais */
+body {
+  font-family: 'Arial', sans-serif;
+  background-color: #f4f5f7;
+  color: #333;
+  margin: 0;
+  padding: 0;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 30px auto;
+  background-color: #fff;
+  border-radius: 10px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  padding: 20px;
+}
+
+h1 {
+  text-align: center;
+  font-size: 1.8rem;
+  color: #007bff;
+  font-weight: bold;
+  margin-bottom: 30px;
+}
+
+/* Lista de Medicamentos */
+.medicamentos-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  justify-content: space-between;
+}
+
+.med-card {
+  background-color: #fff;
+  border: 1px solid #ddd;
+  padding: 20px;
+  border-radius: 8px;
+  width: 30%;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+}
+
+.med-header {
+  text-align: center;
+  margin-bottom: 15px;
+}
+
+.med-header h3 {
+  font-size: 1.4rem;
+  margin-bottom: 15px;
+  color: #333;
+}
+
+.med-image {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+/* Para imagens Base64 (que geralmente são mais detalhadas) */
+.med-image[src^="data:image"] {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+
+.med-info {
+  flex-grow: 1;
+  margin-bottom: 15px;
+}
+
+.med-info p {
+  margin: 8px 0;
+  font-size: 0.95rem;
+}
+
+.med-info strong {
+  font-weight: 600;
+}
+
+.med-footer {
+  text-align: center;
+  margin-top: auto;
+}
+
+.btn-primary {
+  background-color: #007bff;
+  border-color: #007bff;
+  padding: 8px 20px;
+  font-size: 0.95rem;
+  width: 100%;
+}
+
+.btn-primary:hover {
+  background-color: #0069d9;
+  border-color: #0062cc;
+}
+
+.btn-primary:disabled {
+  background-color: #6c757d;
+  border-color: #6c757d;
+}
+
+/* Divisor entre cards */
+.med-card:not(:last-child) {
+  border-bottom: 1px solid #eee;
+  margin-bottom: 15px;
+  padding-bottom: 15px;
+}
+
+/* Mensagem de Sucesso */
+.success-message {
+  background-color: #d4edda;
+  color: #155724;
+  padding: 15px;
+  border-radius: 8px;
+  margin-top: 20px;
+}
+
+.success-message h4 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.success-message p {
+  margin: 5px 0 0;
+}
+
+/* Modal */
+.modal-content {
+  border-radius: 8px;
+}
+
+.modal-header {
+  background-color: #007bff;
+  color: white;
+  font-weight: bold;
+}
+
+.modal-body {
+  background-color: #f8f9fa;
+  padding: 20px;
+}
+
+.modal-footer {
+  background-color: #f8f9fa;
+  border-top: 1px solid #ddd;
+  padding: 15px 20px;
+}
+
+.form-group {
+  margin-bottom: 15px;
+}
+
+.form-control {
+  border-radius: 4px;
+  padding: 8px 12px;
+}
+
+.form-label {
+  font-weight: 600;
+  margin-bottom: 5px;
+  display: block;
+}
+
+hr {
+  margin: 25px 0;
+  border: 0;
+  border-top: 
+  1px solid #eee;
+}
+
+

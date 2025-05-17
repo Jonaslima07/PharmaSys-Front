@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button, Form, Modal } from 'react-bootstrap';
+import { toast, ToastContainer } from 'react-toastify'; // Importando toast e ToastContainer
+import 'react-toastify/dist/ReactToastify.css'; // Importando o estilo do toast
 
 const BatchForm = ({ batch, onClose, onSave }) => {
   const [formData, setFormData] = useState({
@@ -20,7 +22,6 @@ const BatchForm = ({ batch, onClose, onSave }) => {
     quantity: false,
     expirationDate: false,
   });
-  
 
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -94,10 +95,12 @@ const BatchForm = ({ batch, onClose, onSave }) => {
         } catch (e) {
           errorData = { message: `Erro HTTP! status: ${response.status}` };
         }
+        toast.error(errorData.message || 'Erro ao salvar o lote'); // Exibe erro de toast
         throw new Error(errorData.message || 'Erro ao salvar o lote');
       }
 
       const result = await response.json();
+      toast.success(isEdit ? 'Lote atualizado com sucesso!' : 'Lote adicionado com sucesso!'); // Exibe sucesso de toast
       return result;
     } catch (error) {
       setErrorMessage(error.message || 'Erro ao salvar o lote');
@@ -123,8 +126,8 @@ const BatchForm = ({ batch, onClose, onSave }) => {
   };
 
   const handleSubmit = async () => {
-     const manufacturingDate = new Date(formData.manufacturingDate + 'T00:00:00'); // Adiciona a hora para garantir que é 00:00 do dia
-     const expirationDate = new Date(formData.expirationDate + 'T00:00:00'); // Adiciona a hora para garantir que é 00:00 do dia
+    const manufacturingDate = new Date(formData.manufacturingDate + 'T00:00:00'); // Adiciona a hora para garantir que é 00:00 do dia
+    const expirationDate = new Date(formData.expirationDate + 'T00:00:00'); // Adiciona a hora para garantir que é 00:00 do dia
 
     // Pega apenas a data no formato YYYY-MM-DD para evitar problemas de horário
     const manufacturingDateString = manufacturingDate.toISOString().split('T')[0]; // data no formato YYYY-MM-DD
@@ -135,8 +138,8 @@ const BatchForm = ({ batch, onClose, onSave }) => {
       number: !formData.number.trim(),
       manufacturer: !formData.manufacturer.trim(),
       quantity: formData.quantity <= 0,
-       expirationDate: manufacturingDateString >= expirationDateString, // Compara apenas as partes de data
-  };
+      expirationDate: manufacturingDateString >= expirationDateString, // Compara apenas as partes de data
+    };
 
     setFormErrors(errors);
 
@@ -269,11 +272,15 @@ const BatchForm = ({ batch, onClose, onSave }) => {
           {isLoading ? 'Salvando...' : formData.id ? 'Atualizar' : 'Salvar'} Lote
         </Button>
       </Modal.Footer>
+      
+      {/* Add ToastContainer here to display the notifications */}
+      <ToastContainer position="top-right" autoClose={5000} hideProgressBar={false} />
     </Modal>
   );
 };
 
 export default BatchForm;
+
 
 
 

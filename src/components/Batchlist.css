@@ -6,6 +6,7 @@
     min-height: 100vh;
   }
   
+  
   .batch-list-container h1 {
     color: #2e3a4d;
     font-size: 24px;
@@ -211,9 +212,25 @@
     text-align: center;
   }
   
+    .batch-image {
+    width: 250px;
+    height: 300px;
+    margin-bottom: 20px;
+    border-radius: 4px;
+    background-color: #f5f5f5;
+  }
+
+  .no-image {
+    color: #999;
+  }
+
+  .actions-cell {
+    white-space: nowrap;
+  }
+
   .empty-state img {
-    width: 287px; /*antes tava 200 largura e altura auto teste e veja qual voce acha melhor "before or after"*/
-    height: 190px;
+    width: 300px; /*antes tava 200 largura e altura auto teste e veja qual voce acha melhor "before or after"*/
+    height: 200px;
     margin-bottom: 20px;
     opacity: 1.7;
   }
