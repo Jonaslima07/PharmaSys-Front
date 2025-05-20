@@ -21,9 +21,11 @@ const Header = () => {
   };
 
   return (
-  <>
+    <>
       <Navbar style={navbarStyle} variant="dark" expand="lg">
-        <Navbar.Brand href="/" style={{ color: '#fff' }}>PharmaSys</Navbar.Brand>
+        <Navbar.Brand href="/" style={{ color: '#fff' }}>PharmaSys
+          <img src="images/pill.png" alt="Logo" style={logoStyle.logo} />
+        </Navbar.Brand> 
         <Navbar.Toggle aria-controls="basic-navbar-nav" />
         <Navbar.Collapse id="basic-navbar-nav">
           <Nav className="ml-auto">
@@ -90,8 +92,8 @@ const Header = () => {
           </Nav>
         </Navbar.Collapse>
       </Navbar>
-    <div style={footerStyles.divBelowFooter}></div> {/* Linha acima do footer */}
-  </>
+      <div style={footerStyles.divBelowFooter}></div> {/* Linha acima do footer */}
+    </>
   );
 };
 
@@ -117,5 +119,13 @@ const footerStyles = {
     backgroundColor: '#0066cc', // Cor da linha
     width: '100%', // Largura da div (100% da largura do contêiner pai)
     height: '5px', // Altura da div (ajustada para ser uma linha fina)
+  },
+};
+
+const logoStyle = {
+  logo: {
+    width: '20px',
+    position:'relative',
+    marginBottom: '1px'
   }
 };
