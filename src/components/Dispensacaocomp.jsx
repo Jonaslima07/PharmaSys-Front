@@ -378,8 +378,8 @@ const styles = {
   logo: {
     width: '25px',
     position:'relative',
-    left: '-30px',
-    top:'-30px'
+    left: '-290px',
+    top:'-2px'
   },
   modaltitle: {
     position:'relative',

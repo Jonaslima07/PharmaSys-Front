@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import './logincss.css';
 
-const Login = () => {
+const LoginForm = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -77,7 +77,7 @@ const Login = () => {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="seu@email.com"
+                placeholder="digite seu email"
                 disabled={isLoading}
                 style={styles.inputemail}
               />
@@ -94,6 +94,7 @@ const Login = () => {
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  placeholder="digite sua senha"
                   disabled={isLoading}
                   style={styles.input}
                 />
@@ -129,7 +130,7 @@ const Login = () => {
           </div>
 
           <p style={styles.registerLink}>
-            Não possui uma conta? <Link to="/register" style={styles.link}>Crie uma agora</Link>
+            Não possui uma conta? <Link to="/CriarConta" style={styles.link}>Crie uma agora</Link>
           </p>
         </div>
       </div>
@@ -372,7 +373,3 @@ const styles = {
 };
 
 export default Login;
-
-
-
-//código quase seguindo a tela, falta so ajustar a cor do input ao clicar
