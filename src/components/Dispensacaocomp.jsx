@@ -208,7 +208,9 @@ const Dispensacaocomp = () => {
 
       <Modal show={showModal} onHide={() => setShowModal(false)}>
         <Modal.Header closeButton style={styles.modalHeader}>
-          <Modal.Title>Dispensar Medicamento</Modal.Title>
+          <Modal.Title style={styles.modaltitle}>Dispensar Medicamento
+            <img src="images/pill.png" alt="Logo" style={styles.logo} />
+          </Modal.Title>
         </Modal.Header>
         <Modal.Body style={styles.modalBody}>
           {selectedMed && (
@@ -372,5 +374,19 @@ const styles = {
     borderRadius: "4px",
     padding: "8px 12px",
     width: "100%"
-  }
+  },
+  logo: {
+    width: '25px',
+    position:'relative',
+    left: '-30px',
+    top:'-30px'
+  },
+  modaltitle: {
+    position:'relative',
+    left: '20px',
+    height: '40px'
+    
+
+  },
+  
 };
