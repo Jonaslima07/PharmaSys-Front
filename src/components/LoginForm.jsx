@@ -13,37 +13,79 @@ const LoginForm = () => {
 
   const navigate = useNavigate();
 
+  const showToast = (message, type) => {
+    setToastMessage(message);
+    setToastType(type);
+    setTimeout(() => setToastMessage(''), 3000);
+  };
+
+  
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
+  };
+
+  
+  const handleLogin = async (email, password) => {
+    try {
+      const response = await fetch(`http://localhost:5000/users?email=${email}`);
+      
+      if (!response.ok) {
+        throw new Error('Erro ao conectar com o servidor');
+      }
+
+      const users = await response.json();
+      
+      if (users.length === 0) {
+        throw new Error('Email não cadastrado');
+      }
+
+      const user = users[0];
+      
+      if (user.password !== password) {
+        throw new Error('Senha incorreta');
+      }
+
+      return user;
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    
     if (!email || !password) {
-      showToast('Por favor, preencha todos os campos.', 'error');
+      showToast('Por favor, preencha todos os campos', 'error');
       return;
     }
 
     setIsLoading(true);
 
-    setTimeout(() => {
+    try {
+      // Tentativa de login
+      const user = await handleLogin(email, password);
+      
+      
+      localStorage.setItem('userData', JSON.stringify({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        token: 'fake-jwt-token' // Em produção, usar token real
+      }));
+
+      showToast('Login realizado com sucesso!', 'success');
+      
+      
+      setTimeout(() => navigate('/dashboard'), 1500);
+      
+    } catch (error) {
+      showToast(error.message, 'error');
+    } finally {
       setIsLoading(false);
-      if (email === 'demo@pharmasys.com' && password === 'password') {
-        showToast('Login realizado com sucesso.', 'success');
-        navigate('/dashboard');
-      } else {
-        showToast('Email ou senha incorretos.', 'error');
-      }
-    }, 1500);
-  };
-
-  const showToast = (message, type) => {
-    setToastMessage(message);
-    setToastType(type);
-    setTimeout(() => {
-      setToastMessage('');
-    }, 3000);
-  };
-
-  const togglePasswordVisibility = () => {
-    setShowPassword(!showPassword);
+    }
   };
 
   return (
@@ -143,7 +185,7 @@ const styles = {
     display: 'flex',
     height: '100vh',
     backgroundColor: 'white',
-    width: '1500px' // Ensures it takes full width of the viewport
+    width: '1500px' 
 
   },
   authLeft: {
@@ -185,10 +227,10 @@ const styles = {
     justifyContent: 'center',
     alignItems: 'center',
     padding: '2rem',
-    height: '730px', // Let the form take up the necessary space dynamically
-    maxWidth: '1000px', // Alterado de width para maxWidth
-    width: '100%', // Adicionado para ocupar espaço disponível
-    margin: '20 20px' // Adicionado margem para não colar nas bordas
+    height: '730px', 
+    maxWidth: '1000px', 
+    width: '100%', 
+    margin: '20 20px' 
 
   },
   authContent: {

@@ -18,23 +18,28 @@ const CriarContaForm = () => {
 
   const navigate = useNavigate();
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    if (!name || !email || !birthDate || !password || password !== confirmPassword) {
-      showToast('Por favor, preencha todos os campos corretamente.', 'error');
-      return;
+  const checkEmailExists = async (email) => {
+    try {
+      const response = await fetch(`http://localhost:5000/users?email=${email}`);
+      const data = await response.json();
+      return data.length > 0;
+    } catch (error) {
+      console.error('Erro ao verificar email:', error);
+      return false;
     }
-
-    setIsLoading(true);
-
-    setTimeout(() => {
-      setIsLoading(false);
-      showToast('Conta criada com sucesso.', 'success');
-      navigate('/dashboard');
-    }, 1500);
   };
 
+  
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
+  };
+
+  
+  const toggleConfirmPasswordVisibility = () => {
+    setShowConfirmPassword(!showConfirmPassword);
+  };
+
+   
   const showToast = (message, type) => {
     setToastMessage(message);
     setToastType(type);
@@ -43,12 +48,70 @@ const CriarContaForm = () => {
     }, 3000);
   };
 
-  const togglePasswordVisibility = () => {
-    setShowPassword(!showPassword);
+  
+  const createUser = async (userData) => {
+    try {
+      const response = await fetch('http://localhost:5000/users', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(userData),
+      });
+      return await response.json();
+    } catch (error) {
+      console.error('Erro ao criar usuário:', error);
+      throw error;
+    }
   };
 
-  const toggleConfirmPasswordVisibility = () => {
-    setShowConfirmPassword(!showConfirmPassword);
+    const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!name || !email || !birthDate || !password || password !== confirmPassword) {
+      showToast('Por favor, preencha todos os campos corretamente.', 'error');
+      return;
+    }
+
+    if (password.length < 6) {
+      showToast('A senha deve ter pelo menos 6 caracteres.', 'error');
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const emailExists = await checkEmailExists(email);
+      if (emailExists) {
+        showToast('Este email já está cadastrado.', 'error');
+        setIsLoading(false);
+        return;
+      }
+
+      const newUser = {
+        name,
+        email,
+        birthDate,
+        role,
+        password,
+        createdAt: new Date().toISOString()
+      };
+
+      await createUser(newUser);
+      
+      showToast('Conta criada com sucesso! Redirecionando para login...', 'success');
+      
+      // Redireciona para a tela de login após 2 segundos
+      setTimeout(() => {
+        navigate('/login'); // Altere para o caminho correto da sua rota de login
+      }, 2000);
+      
+    } catch (error) {
+      showToast('Erro ao criar conta. Tente novamente.', 'error');
+      console.error('Erro no cadastro:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -190,11 +253,11 @@ const CriarContaForm = () => {
 };
 
 const styles = {
-  // ... (mantenha todos os estilos anteriores)
+  
 
   passwordContainer: {
     position: 'relative',
-    width: '200px', // Ajuste conforme necessário
+    width: '200px', 
   },
 
   eyeIcontwo: {
@@ -406,11 +469,11 @@ const styles = {
     fontSize: '14px',
     boxSizing: 'border-box',
     position: 'relative',
-    top: '30px', // Ajustado para alinhar com os outros campos
+    top: '30px', 
     
   },
 
-  // Ajuste os estilos dos inputs de senha para acomodar o ícone
+  
   input4: {
     width: '200px',
     padding: '10px',
@@ -421,7 +484,7 @@ const styles = {
     position: 'relative',
     top: '-35px',
     marginTop: '30px',
-    paddingRight: '40px', // Espaço para o ícone
+    paddingRight: '40px', 
   },
 
    input5: {
@@ -434,7 +497,7 @@ const styles = {
     position: 'relative',
     top: '-150px',
     left: '218px',
-    paddingRight: '40px', // Espaço para o ícone
+    paddingRight: '40px', 
   },
 
   button: {

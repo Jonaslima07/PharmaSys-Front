@@ -1,4 +1,41 @@
 {
+  "users": [
+    {
+      "id": 1,
+      "name": "Admin",
+      "email": "admin@example.com",
+      "birthDate": "1990-01-01",
+      "role": "farmaceutico",
+      "password": "123456"
+    },
+    {
+      "id": "c8f5",
+      "name": "jair micias bostonaro",
+      "email": "godchinchila01@gmail.com",
+      "birthDate": "2001-01-20",
+      "role": "farmaceutico",
+      "password": "123456",
+      "createdAt": "2025-05-21T01:14:11.112Z"
+    },
+    {
+      "id": "c5c5",
+      "name": "pharmasys dono  ",
+      "email": "demo@pharmasys.com",
+      "birthDate": "1996-01-20",
+      "role": "farmaceutico",
+      "password": "password",
+      "createdAt": "2025-05-21T01:25:11.455Z"
+    },
+    {
+      "id": "b7cb",
+      "name": "joao henrique alves da costa",
+      "email": "rike.costa9@gmail.com",
+      "birthDate": "2002-06-16",
+      "role": "farmaceutico",
+      "password": "123456",
+      "createdAt": "2025-05-21T01:35:51.927Z"
+    }
+  ],
   "pacientes": [
     {
       "id": "1745026136642",
