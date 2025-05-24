@@ -75,7 +75,7 @@ const LoginForm = () => {
       showToast('Login realizado com sucesso!', 'success');
       
       // Redirecionando para o Dashboard
-      setTimeout(() => navigate('/dashboard'), 1500);
+      setTimeout(() => navigate('/cadastropaciente'), 1500);
       
     } catch (error) {
       showToast(error.message, 'error');
@@ -83,7 +83,7 @@ const LoginForm = () => {
       setIsLoading(false);
     }
   };
-  
+
   return (
     <div style={styles.authContainer}>
       <div style={styles.authLeft}>

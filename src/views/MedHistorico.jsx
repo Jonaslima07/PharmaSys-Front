@@ -1,11 +1,13 @@
 import React from 'react';
-import Dispensacaocomp from '../components/Dispensacaocomp';
+import MedicationHistory from '../components/MedicationHistory';
 
 const Dashboard = () => {
   return (
   <>
-    <Dispensacaocomp/>
+
+     <MedicationHistory/>
   </>
+ 
   );
 };
 

@@ -33,13 +33,13 @@ const HeaderLoggedIn = ({ onLogout }) => {
           <Nav className="ml-auto">
             <Nav.Link
               as={Link}
-              to="/dashboard"
+              to="/historicomedicamentos"
               style={{ ...linkStyle, ...(hovered || clicked ? { color: '#78C2FF' } : {}) }}
               onMouseEnter={handleMouseEnter}
               onMouseLeave={handleMouseLeave}
               onClick={handleMouseClick}
             >
-              Dashboard
+              Historico
             </Nav.Link>
             <Nav.Link
               as={Link}

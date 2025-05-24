@@ -7,7 +7,7 @@ import CadastroPaciente from './views/CadastroPaciente.jsx';
 import Login from './views/Login.jsx';
 import NoPage from './views/NoPage.jsx';
 import CadastroDlotes from './views/CadastroDlotes.jsx';
-import Dashboard from './views/Dashboard.jsx'; // Importe o Dashboard
+import MedHistorico from './views/MedHistorico.jsx'; // Importe o Dashboard
 
 function App() {
   const router = createBrowserRouter([
@@ -41,8 +41,8 @@ function App() {
           element: <CadastroDlotes />,  
         },
         {
-          path: 'dashboard', // Adiciona a rota do Dashboard
-          element: <Dashboard />, 
+          path: 'historicomedicamentos', // Adiciona a rota do Dashboard
+          element: <MedHistorico />, 
         },
       ],
     },
