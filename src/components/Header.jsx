@@ -20,6 +20,7 @@ const Header = () => {
   };
 
   return (
+  <>
     <Navbar style={navbarStyle} variant="dark" expand="lg">
       <Navbar.Brand href="/" style={{ color: '#fff' }}>PharmaSys
         <img src="images/pill.png" alt="Logo" style={logoStyle.logo} />
@@ -60,6 +61,9 @@ const Header = () => {
         </Nav>
       </Navbar.Collapse>
     </Navbar>
+
+   <div style={footerStyles.divBelowFooter}></div>
+  </>
   );
 };
 
@@ -85,5 +89,15 @@ const logoStyle = {
     width: '20px',
     position: 'relative',
     marginBottom: '1px',
+  }
+
+  
+};
+
+const footerStyles = {
+  divBelowFooter: {
+    backgroundColor: '#0066cc',
+    width: '100%',
+    height: '3px',
   }
 };

@@ -95,6 +95,8 @@ const HeaderLoggedIn = ({ onLogout }) => {
           </Button>
         </Modal.Footer>
       </Modal>
+
+    <div style={footerStyles.divBelowFooter}></div>
     </>
   );
 };
@@ -121,5 +123,13 @@ const logoStyle = {
     width: '20px',
     position: 'relative',
     marginBottom: '1px',
+  }
+};
+
+const footerStyles = {
+  divBelowFooter: {
+    backgroundColor: '#0066cc',
+    width: '100%',
+    height: '3px',
   }
 };

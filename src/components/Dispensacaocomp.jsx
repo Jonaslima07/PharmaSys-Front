@@ -8,10 +8,13 @@ const Dispensacaocomp = () => {
   const [selectedMed, setSelectedMed] = useState(null);
   const [quantidade, setQuantidade] = useState(1);
   const [dispensadoPor, setDispensadoPor] = useState("");
+  const [cartaoSus, setCartaoSus] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [successMsg, setSuccessMsg] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [historico, setHistorico] = useState([]);
+  const [pacientes, setPacientes] = useState([]);
+  const [noPatients, setNoPatients] = useState(false);
 
   const getImageSource = (imageData) => {
     if (!imageData) return "/default-image.png";
@@ -27,44 +30,72 @@ const Dispensacaocomp = () => {
   };
 
   useEffect(() => {
-  const fetchMedicamentos = async () => {
-    setIsLoading(true);
-    try {
-      const response = await fetch("http://localhost:5000/lotes");
-      if (response.ok) {
-        const data = await response.json();
-        const medicamentosFormatados = data
-          .filter(med => med.quantity > 0) // Filtra apenas medicamentos com estoque
-          .map(med => ({
-            ...med,
-            imageUrl: getImageSource(med.medicationImage || med.imageUrl)
-          }));
-        setMedicamentos(medicamentosFormatados);
-      } else {
+    const fetchMedicamentos = async () => {
+      setIsLoading(true);
+      try {
+        const response = await fetch("http://localhost:5000/lotes");
+        if (response.ok) {
+          const data = await response.json();
+          const medicamentosFormatados = data
+            .filter(med => med.quantity > 0)
+            .map(med => ({
+              ...med,
+              imageUrl: getImageSource(med.medicationImage || med.imageUrl)
+            }));
+          setMedicamentos(medicamentosFormatados);
+        } else {
+          toast.error("Erro ao carregar medicamentos.");
+        }
+      } catch (error) {
         toast.error("Erro ao carregar medicamentos.");
+        console.error("Detalhes do erro:", error);
+      } finally {
+        setIsLoading(false);
       }
-    } catch (error) {
-      toast.error("Erro ao carregar medicamentos.");
-      console.error("Detalhes do erro:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    };
 
-  fetchMedicamentos();
-}, []);
+    const fetchPacientes = async () => {
+      try {
+        const response = await fetch("http://localhost:5000/pacientes");
+        if (response.ok) {
+          const data = await response.json();
+          setPacientes(data);
+          setNoPatients(data.length === 0);
+        } else {
+          toast.error("Erro ao carregar pacientes.");
+        }
+      } catch (error) {
+        toast.error("Erro ao carregar pacientes.");
+        console.error("Detalhes do erro:", error);
+      }
+    };
+
+    fetchMedicamentos();
+    fetchPacientes();
+  }, []);
 
   const handleDispensarClick = (med) => {
+    if (noPatients) {
+      toast.error("Nenhum paciente cadastrado no sistema.");
+      return;
+    }
+    
     setSelectedMed(med);
-    setQuantidade(1); // Resetar quantidade ao abrir modal
+    setQuantidade(1);
     setShowModal(true);
   };
 
-      const confirmarDispensacao = async () => {
+  const handlePacienteChange = (e) => {
+    const selectedPaciente = pacientes.find(p => p.nome === e.target.value);
+    setDispensadoPor(selectedPaciente?.nome || "");
+    setCartaoSus(selectedPaciente?.numeroCartaoSUS || "");
+  };
+
+  const confirmarDispensacao = async () => {
     if (!selectedMed) return;
 
     if (!dispensadoPor.trim()) {
-      toast.error("Informe quem está retirando o medicamento.");
+      toast.error("Selecione um paciente.");
       return;
     }
 
@@ -81,43 +112,39 @@ const Dispensacaocomp = () => {
     const novaQuantidade = selectedMed.quantity - quantidade;
 
     try {
-      // 1. Atualizar no banco de dados - agora mantemos todos os campos do medicamento
       const response = await fetch(`http://localhost:5000/lotes/${selectedMed.id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          ...selectedMed, // Mantemos todas as propriedades do medicamento
-          quantity: novaQuantidade, // Apenas atualizamos a quantidade
+          ...selectedMed,
+          quantity: novaQuantidade,
         }),
       });
 
       if (response.ok) {
-        // 2. Adicionar ao histórico
         const novoRegistro = {
           id: Date.now(),
           medicamento: selectedMed.medicationName,
           lote: selectedMed.number,
           quantidade: quantidade,
           paciente: dispensadoPor,
+          cartaoSus: cartaoSus,
           data: new Date().toISOString(),
           medicamentoId: selectedMed.id
         };
         
         setHistorico(prev => [...prev, novoRegistro]);
 
-        // 3. Atualizar estado local - agora mantemos todos os campos
         if (novaQuantidade <= 0) {
-          // Remover medicamento se estoque zerou
           setMedicamentos(prev => prev.filter(item => item.id !== selectedMed.id));
         } else {
-          // Atualizar quantidade mantendo todos os outros campos
           setMedicamentos(prev =>
             prev.map(item =>
               item.id === selectedMed.id ? { 
-                ...item, // Mantemos todas as propriedades
-                quantity: novaQuantidade // Apenas atualizamos a quantidade
+                ...item,
+                quantity: novaQuantidade
               } : item
             )
           );
@@ -126,6 +153,7 @@ const Dispensacaocomp = () => {
         setSuccessMsg(`${quantidade} unidade(s) de ${selectedMed.medicationName} dispensada(s) para ${dispensadoPor}.`);
         setShowModal(false);
         setDispensadoPor("");
+        setCartaoSus("");
       } else {
         toast.error("Erro ao dispensar medicamento.");
       }
@@ -135,15 +163,12 @@ const Dispensacaocomp = () => {
     }
   };
 
-
   const ImagemMedicamento = ({ src, alt }) => {
     const [imageSrc, setImageSrc] = useState(src);
     
-    // Se a quantidade for zero, não mostra a imagem
     if (quantidade <= 0) {
       return null;
     }
-
 
     return (
       <div style={styles.medImageContainer}>
@@ -161,6 +186,13 @@ const Dispensacaocomp = () => {
     <div style={styles.container}>
       <h1 style={styles.title}>Dispensação de Medicamentos</h1>
 
+      {noPatients && (
+        <div style={styles.noPatientsAlert}>
+          <h4>Nenhum paciente cadastrado no sistema</h4>
+          <p>Por favor, cadastre pacientes antes de realizar dispensações.</p>
+        </div>
+      )}
+
       {isLoading ? (
         <p>Carregando medicamentos...</p>
       ) : (
@@ -172,9 +204,8 @@ const Dispensacaocomp = () => {
               <ImagemMedicamento 
                 src={med.imageUrl}
                 alt={med.medicationName}
-                 quantidade={med.quantity} // Adicione esta linha
+                quantidade={med.quantity}
               /> 
-             
               
               <div style={styles.medInfo}>
                 <p><strong>Lote:</strong> {med.number}</p>
@@ -187,7 +218,7 @@ const Dispensacaocomp = () => {
                 <Button
                   variant="primary"
                   onClick={() => handleDispensarClick(med)}
-                  disabled={med.quantity <= 0}
+                  disabled={med.quantity <= 0 || noPatients}
                   style={styles.dispensarBtn}
                 >
                   Dispensar
@@ -234,15 +265,31 @@ const Dispensacaocomp = () => {
                 />
               </Form.Group>
 
-              <Form.Group controlId="dispensadoPor" style={styles.formGroup}>
-                <Form.Label style={styles.formLabel}>Paciente/Responsável</Form.Label>
+              <Form.Group controlId="paciente" style={styles.formGroup}>
+                <Form.Label style={styles.formLabel}>Paciente</Form.Label>
                 <Form.Control
-                  type="text"
+                  as="select"
                   value={dispensadoPor}
-                  onChange={(e) => setDispensadoPor(e.target.value)}
-                  placeholder="Nome completo do paciente"
+                  onChange={handlePacienteChange}
                   style={styles.formControl}
                   required
+                >
+                  <option value="">Selecione um paciente</option>
+                  {pacientes.map(paciente => (
+                    <option key={paciente.id} value={paciente.nome}>
+                      {paciente.nome}
+                    </option>
+                  ))}
+                </Form.Control>
+              </Form.Group>
+
+              <Form.Group controlId="cartaoSus" style={styles.formGroup}>
+                <Form.Label style={styles.formLabel}>Cartão do SUS</Form.Label>
+                <Form.Control
+                  type="text"
+                  value={cartaoSus}
+                  readOnly
+                  style={styles.formControl}
                 />
               </Form.Group>
             </>
