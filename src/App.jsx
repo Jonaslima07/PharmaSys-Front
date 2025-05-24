@@ -1,45 +1,48 @@
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import Layout from './templates/Layout.jsx';
-// import Header from './components/Header';  // O Header já está sendo importado no Layout
 import Home from './views/Home.jsx';
-import CriarConta from './views/CriarConta.jsx';  // Comentei temporariamente
+import CriarConta from './views/CriarConta.jsx';
 import Dispensacao from './views/Dispensacao.jsx';
-import CadastroPaciente from './views/CadastroPaciente.jsx';  // Comentei temporariamente
-// import LojaCategoria from './components/LojaCategoria.jsx';  // Comentei temporariamente
-import Login from './views/Login.jsx';  // Comentei temporariamente
-import NoPage from './views/NoPage.jsx';  // Este ainda vai ser usado para a rota de erro
-import CadastroDlotes from './views/CadastroDlotes.jsx';  // Este ainda vai ser usado para a rota de erro
+import CadastroPaciente from './views/CadastroPaciente.jsx';
+import Login from './views/Login.jsx';
+import NoPage from './views/NoPage.jsx';
+import CadastroDlotes from './views/CadastroDlotes.jsx';
+import Dashboard from './views/Dashboard.jsx'; // Importe o Dashboard
 
 function App() {
   const router = createBrowserRouter([
     {
       path: '/',
-      element: <Layout />,
+      element: <Layout />, // Usa o Layout que contém o Header condicional
       errorElement: <NoPage />,
       children: [
         {
           index: true,
-           element: <Home />,
+          element: <Home />,
         },
         {
           path: 'cadastropaciente',
-           element: <CadastroPaciente />,  // Comentei temporariamente
+          element: <CadastroPaciente />,  
         },
         {
           path: 'criarconta',
-           element: <CriarConta />,  // Comentei temporariamente
+          element: <CriarConta />,  
         },
         {
           path: 'login',
-           element: <Login />,  // Comentei temporariamente
+          element: <Login />,  
         },
         {
           path: 'dispensacao',
-           element: <Dispensacao />,  // Comentei temporariamente
+          element: <Dispensacao />,  
         },
         {
           path: 'cadastrarlotes',
-           element: <CadastroDlotes />,  // Comentei temporariamente
+          element: <CadastroDlotes />,  
+        },
+        {
+          path: 'dashboard', // Adiciona a rota do Dashboard
+          element: <Dashboard />, 
         },
       ],
     },
@@ -47,7 +50,6 @@ function App() {
 
   return (
     <div>
-      {/* <Header />  // O Header já está sendo importado no Layout */}
       <RouterProvider router={router} />
     </div>
   );

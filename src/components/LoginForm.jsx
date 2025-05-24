@@ -19,12 +19,10 @@ const LoginForm = () => {
     setTimeout(() => setToastMessage(''), 3000);
   };
 
-  
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
   };
 
-  
   const handleLogin = async (email, password) => {
     try {
       const response = await fetch(`http://localhost:5000/users?email=${email}`);
@@ -51,11 +49,9 @@ const LoginForm = () => {
     }
   };
 
-  
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    
     if (!email || !password) {
       showToast('Por favor, preencha todos os campos', 'error');
       return;
@@ -67,7 +63,7 @@ const LoginForm = () => {
       // Tentativa de login
       const user = await handleLogin(email, password);
       
-      
+      // Armazenando dados do usuário no localStorage
       localStorage.setItem('userData', JSON.stringify({
         id: user.id,
         name: user.name,
@@ -78,7 +74,7 @@ const LoginForm = () => {
 
       showToast('Login realizado com sucesso!', 'success');
       
-      
+      // Redirecionando para o Dashboard
       setTimeout(() => navigate('/dashboard'), 1500);
       
     } catch (error) {
@@ -87,7 +83,7 @@ const LoginForm = () => {
       setIsLoading(false);
     }
   };
-
+  
   return (
     <div style={styles.authContainer}>
       <div style={styles.authLeft}>
