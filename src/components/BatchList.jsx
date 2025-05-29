@@ -52,7 +52,7 @@ const BatchList = () => {
     loadBatches();
   };
 
-    const handleFormSubmit = async (batchData) => {
+  const handleFormSubmit = async (batchData) => {
     try {
       setIsLoading(true);
       
@@ -94,6 +94,7 @@ const BatchList = () => {
       setIsLoading(false);
     }
   };
+
   const filteredBatches = batches.filter(batch => {
     if (!batch) return false;
     
@@ -125,16 +126,16 @@ const BatchList = () => {
   };
 
   const formatDate = (dateString) => {
-  if (!dateString) return '-';
-  try {
-    // Adiciona um dia para compensar o fuso horário
-    const date = new Date(dateString);
-    date.setDate(date.getDate() + 1); // Compensa a diferença de timezone
-    return date.toLocaleDateString('pt-BR');
-  } catch {
-    return '-';
-  }
-};
+    if (!dateString) return '-';
+    try {
+      // Adiciona um dia para compensar o fuso horário
+      const date = new Date(dateString);
+      date.setDate(date.getDate() + 1); // Compensa a diferença de timezone
+      return date.toLocaleDateString('pt-BR');
+    } catch {
+      return '-';
+    }
+  };
 
   const calculateStatus = (expirationDate) => {
     if (!expirationDate) return 'A vencer';
@@ -222,6 +223,7 @@ const BatchList = () => {
                   <th>Fabricante</th>
                   <th>Validade</th>
                   <th>Quantidade</th>
+                  <th>Gramas</th> {/* Nova coluna para Gramas */}
                   <th>Status</th>
                   <th>Data de Fabricação</th>
                   <th>Ações</th>
@@ -254,6 +256,7 @@ const BatchList = () => {
                       <td>{batch.manufacturer || '-'}</td>
                       <td>{formatDate(batch.expirationDate)}</td>
                       <td>{batch.quantity || '0'}</td>
+                      <td>{batch.grams || '0'} gramas</td> {/* Exibe os gramas */}
                       <td>
                         <span className="status-badge" style={getStatusStyle(status)}>
                           {status}

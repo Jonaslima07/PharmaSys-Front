@@ -13,6 +13,7 @@ const BatchForm = ({ batch, onClose, onSave }) => {
     medicationName: '',
     medicationImage: '', // Agora a imagem será em base64
     manufacturingDate: '',
+    grams: 0, // Adicionando o campo gramas
   });
 
   const [formErrors, setFormErrors] = useState({
@@ -21,6 +22,7 @@ const BatchForm = ({ batch, onClose, onSave }) => {
     manufacturer: false,
     quantity: false,
     expirationDate: false,
+    grams: false, // Adicionando validação de gramas
   });
 
   const [isLoading, setIsLoading] = useState(false);
@@ -55,6 +57,7 @@ const BatchForm = ({ batch, onClose, onSave }) => {
         medicationName: '',
         medicationImage: '',
         manufacturingDate: today,
+        grams: 0, // Inicializando o campo gramas
       });
     }
   }, [batch]);
@@ -77,6 +80,7 @@ const BatchForm = ({ batch, onClose, onSave }) => {
         medicationName: batchData.medicationName,
         medicationImage: batchData.medicationImage || null, // A imagem estará em base64
         manufacturingDate: batchData.manufacturingDate,
+        grams: batchData.grams, // Enviando o campo gramas
       };
 
       const response = await fetch(endpoint, {
@@ -139,6 +143,7 @@ const BatchForm = ({ batch, onClose, onSave }) => {
       manufacturer: !formData.manufacturer.trim(),
       quantity: formData.quantity <= 0,
       expirationDate: manufacturingDateString >= expirationDateString, // Compara apenas as partes de data
+      grams: formData.grams <= 0, // Valida se as gramas são positivas
     };
 
     setFormErrors(errors);
@@ -228,6 +233,21 @@ const BatchForm = ({ batch, onClose, onSave }) => {
             </Form.Control.Feedback>
           </Form.Group>
 
+          <Form.Group className="mb-3" controlId="grams">
+            <Form.Label style={{ color: '#000000' }}>Gramas do Medicamento</Form.Label>
+            <Form.Control
+              type="number"
+              min="0"
+              placeholder="Digite a quantidade em gramas"
+              value={formData.grams}
+              onChange={(e) => handleInputChange('grams', parseFloat(e.target.value) || 0)}
+              isInvalid={formErrors.grams}
+            />
+            <Form.Control.Feedback type="invalid" style={{ marginTop: '-16px', fontSize: '14px', color: '#dc3545' }}>
+              Por favor, informe a quantidade em gramas
+            </Form.Control.Feedback>
+          </Form.Group>
+
           <Form.Group className="mb-3" controlId="manufacturingDate">
             <Form.Label style={{ color: '#000000' }}>Data de Fabricação</Form.Label>
             <Form.Control
@@ -280,7 +300,6 @@ const BatchForm = ({ batch, onClose, onSave }) => {
 };
 
 export default BatchForm;
-
 
 
 

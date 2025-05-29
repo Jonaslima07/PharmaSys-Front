@@ -6,11 +6,13 @@ const PesquisaPaciente = ({ pacientes, onSelectPaciente }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredPacientes, setFilteredPacientes] = useState([]);
 
-  // Filtra pacientes baseado no input (mas não seleciona automaticamente)
+  // Filtra pacientes baseado no input (nome, CPF ou identidade)
   const searchPaciente = (query) => {
     if (query) {
       const filtered = pacientes.filter((paciente) =>
-        paciente.nome.toLowerCase().includes(query.toLowerCase())
+        paciente.nome.toLowerCase().includes(query.toLowerCase()) || 
+        paciente.cpf.includes(query) || 
+        paciente.identidade.includes(query)
       );
       setFilteredPacientes(filtered);
     } else {
@@ -47,7 +49,7 @@ const PesquisaPaciente = ({ pacientes, onSelectPaciente }) => {
         <Form.Control
           style={styles.inputField}
           type="text"
-          placeholder="Pesquise um paciente..."
+          placeholder="Pesquise por nome, CPF ou identidade..."
           value={searchQuery}
           onChange={handleSearchChange}
           onKeyPress={handleKeyPress}
@@ -131,14 +133,3 @@ const styles = {
 };
 
 export default PesquisaPaciente;
-
-
-
-
-
-
-
-
-
-
-

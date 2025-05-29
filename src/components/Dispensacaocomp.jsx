@@ -91,90 +91,90 @@ const Dispensacaocomp = () => {
     setCartaoSus(selectedPaciente?.numeroCartaoSUS || "");
   };
 
-    const confirmarDispensacao = async () => {
-  if (!selectedMed) return;
+  const confirmarDispensacao = async () => {
+    if (!selectedMed) return;
 
-  if (!dispensadoPor.trim()) {
-    toast.error("Selecione um paciente.");
-    return;
-  }
+    if (!dispensadoPor.trim()) {
+      toast.error("Selecione um paciente.");
+      return;
+    }
 
-  if (quantidade <= 0) {
-    toast.error("Quantidade deve ser maior que zero.");
-    return;
-  }
+    if (quantidade <= 0) {
+      toast.error("Quantidade deve ser maior que zero.");
+      return;
+    }
 
-  if (quantidade > selectedMed.quantity) {
-    toast.error(`Quantidade indisponível. Estoque atual: ${selectedMed.quantity}`);
-    return;
-  }
+    if (quantidade > selectedMed.quantity) {
+      toast.error(`Quantidade indisponível. Estoque atual: ${selectedMed.quantity}`);
+      return;
+    }
 
-  const novaQuantidade = selectedMed.quantity - quantidade;
+    const novaQuantidade = selectedMed.quantity - quantidade;
 
-  try {
-    // 1. Atualiza o lote no servidor
-    const response = await fetch(`http://localhost:5000/lotes/${selectedMed.id}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        ...selectedMed,
-        quantity: novaQuantidade,
-      }),
-    });
+    try {
+      // 1. Atualiza o lote no servidor
+      const response = await fetch(`http://localhost:5000/lotes/${selectedMed.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          ...selectedMed,
+          quantity: novaQuantidade,
+        }),
+      });
 
-    if (response.ok) {
-      // 2. Cria o registro de histórico
-      const novoRegistro = {
-        id: Date.now(),
-        medicamento: selectedMed.medicationName,
-        lote: selectedMed.number,
-        quantidade: quantidade,
-        paciente: dispensadoPor,
-        cartaoSus: cartaoSus,
-        data: new Date().toISOString(),
-        medicamentoId: selectedMed.id,
-        dosagem: "1 comprimido após as refeições",
-        dispensadoPor: "Dra. Malta Santos"
-      };
+      if (response.ok) {
+        // 2. Cria o registro de histórico
+        const novoRegistro = {
+          id: Date.now(),
+          medicamento: selectedMed.medicationName,
+          lote: selectedMed.number,
+          quantidade: quantidade,
+          paciente: dispensadoPor,
+          cartaoSus: cartaoSus,
+          data: new Date().toISOString(),
+          medicamentoId: selectedMed.id,
+          dosagem: "1 comprimido após as refeições",
+          dispensadoPor: "Dra. Malta Santos"
+        };
 
-      // 3. Tenta salvar no histórico e usa fallback local se falhar
-      try {
-        const historicoResponse = await fetch('http://localhost:5000/historicos', {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(novoRegistro)
-        });
+        // 3. Tenta salvar no histórico e usa fallback local se falhar
+        try {
+          const historicoResponse = await fetch('http://localhost:5000/historicos', {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(novoRegistro)
+          });
 
-        if (!historicoResponse.ok) {
-          console.warn("Falha ao salvar no histórico, usando fallback local");
+          if (!historicoResponse.ok) {
+            console.warn("Falha ao salvar no histórico, usando fallback local");
+            setHistorico(prev => [...prev, novoRegistro]);
+          }
+        } catch (historicoError) {
+          console.warn("Erro ao acessar /historico, usando fallback:", historicoError);
           setHistorico(prev => [...prev, novoRegistro]);
         }
-      } catch (historicoError) {
-        console.warn("Erro ao acessar /historico, usando fallback:", historicoError);
-        setHistorico(prev => [...prev, novoRegistro]);
+
+        // 4. Atualiza a UI, removendo o medicamento da lista se a quantidade for zero
+        setMedicamentos(prev =>
+          prev.filter(item => item.id !== selectedMed.id || item.quantity > 0)
+        );
+
+        setSuccessMsg(`${quantidade} unidade(s) de ${selectedMed.medicationName} dispensada(s) para ${dispensadoPor}.`);
+        setShowModal(false);
+        setDispensadoPor("");
+        setCartaoSus("");
+      } else {
+        toast.error("Erro ao dispensar medicamento.");
       }
-
-      // 4. Atualiza a UI, removendo o medicamento da lista se a quantidade for zero
-      setMedicamentos(prev =>
-        prev.filter(item => item.id !== selectedMed.id || item.quantity > 0)
-      );
-
-      setSuccessMsg(`${quantidade} unidade(s) de ${selectedMed.medicationName} dispensada(s) para ${dispensadoPor}.`);
-      setShowModal(false);
-      setDispensadoPor("");
-      setCartaoSus("");
-    } else {
+    } catch (error) {
       toast.error("Erro ao dispensar medicamento.");
+      console.error("Detalhes do erro:", error);
     }
-  } catch (error) {
-    toast.error("Erro ao dispensar medicamento.");
-    console.error("Detalhes do erro:", error);
-  }
-};
+  };
 
   const ImagemMedicamento = ({ src, alt }) => {
     const [imageSrc, setImageSrc] = useState(src);
@@ -225,6 +225,7 @@ const Dispensacaocomp = () => {
                 <p><strong>Fabricante:</strong> {med.manufacturer}</p>
                 <p><strong>Validade:</strong> {med.expirationDate}</p>
                 <p><strong>Estoque:</strong> {med.quantity} unidade(s)</p>
+                <p><strong>Gramas:</strong> {med.grams || 'N/A'}</p> {/* Exibindo gramas */}
               </div>
               
               <div style={styles.medFooter}>

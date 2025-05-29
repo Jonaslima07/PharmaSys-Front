@@ -8,6 +8,7 @@ import Login from './views/Login.jsx';
 import NoPage from './views/NoPage.jsx';
 import CadastroDlotes from './views/CadastroDlotes.jsx';
 import MedHistorico from './views/MedHistorico.jsx'; // Importe o Dashboard
+import Homelogar from './components/homelogar.jsx';
 
 function App() {
   const router = createBrowserRouter([
@@ -19,6 +20,10 @@ function App() {
         {
           index: true,
           element: <Home />,
+        },
+        {
+          path: 'homelogar', //pagina home quando logar
+          element: <Homelogar />,  
         },
         {
           path: 'cadastropaciente',
@@ -41,7 +46,7 @@ function App() {
           element: <CadastroDlotes />,  
         },
         {
-          path: 'historicomedicamentos', // Adiciona a rota do Dashboard
+          path: 'historicomedicamentos', 
           element: <MedHistorico />, 
         },
       ],

@@ -24,7 +24,7 @@ const HeaderLoggedIn = ({ onLogout }) => {
   return (
     <>
       <Navbar style={navbarStyle} variant="dark" expand="lg">
-        <Navbar.Brand href="/" style={{ color: '#fff' }}>
+        <Navbar.Brand href="/homelogar" style={{ color: '#fff' }}>
           PharmaSys
           <img src="images/pill.png" alt="Logo" style={logoStyle.logo} />
         </Navbar.Brand>

@@ -6,12 +6,15 @@ import PesquisaPaciente from './PesquisaPaciente';
 const CadastrarPaciente = () => {
   const [pacientes, setPacientes] = useState([]);
   const [formData, setFormData] = useState({
-    id: null, 
+    id: null,
     nome: '',
     numeroCartaoSUS: '',
     identidade: '',
     medicamento: '',
     quantidade: 0,
+    cpf: '',
+    telefone: '',
+    endereco: '',
   });
   const [formErrors, setFormErrors] = useState({
     nome: false,
@@ -19,10 +22,13 @@ const CadastrarPaciente = () => {
     identidade: false,
     medicamento: false,
     quantidade: false,
+    cpf: false,
+    telefone: false,
+    endereco: false,
   });
   const [modalVisible, setModalVisible] = useState(false);
   const [editMode, setEditMode] = useState(false);
-  const pacienteRefs = useRef({}); // Referência para rolar até a área do paciente selecionado
+  const pacienteRefs = useRef({});
   const navigate = useNavigate();
   const { id } = useParams();
 
@@ -63,7 +69,7 @@ const CadastrarPaciente = () => {
   const savePaciente = async (paciente) => {
     try {
       let response;
-      const url = editMode 
+      const url = editMode
         ? `http://localhost:5000/pacientes/${paciente.id}`
         : 'http://localhost:5000/pacientes';
 
@@ -138,12 +144,15 @@ const CadastrarPaciente = () => {
   const handleAddPaciente = () => {
     const errors = {
       nome: !formData.nome,
-      numeroCartaoSUS: !/^\d{15}$/.test(formData.numeroCartaoSUS), // Valida 15 números
-      identidade: !/^\d{10}$/.test(formData.identidade), // Valida 10 números
+      numeroCartaoSUS: !/^\d{15}$/.test(formData.numeroCartaoSUS),
+      identidade: !/^\d{10}$/.test(formData.identidade),
       medicamento: !formData.medicamento,
       quantidade: !formData.quantidade,
+      cpf: !/^\d{11}$/.test(formData.cpf),
+      telefone: !/^\d{10,11}$/.test(formData.telefone),
+      endereco: !formData.endereco,
     };
-    
+
     setFormErrors(errors);
 
     if (Object.values(errors).includes(true)) {
@@ -151,9 +160,8 @@ const CadastrarPaciente = () => {
       return;
     }
 
-    // Gerar um ID único se não existir
     if (!formData.id) {
-      formData.id = Date.now().toString(); // Gerando ID único baseado no timestamp
+      formData.id = Date.now().toString();
     }
 
     savePaciente(formData);
@@ -166,7 +174,10 @@ const CadastrarPaciente = () => {
       numeroCartaoSUS: '',
       identidade: '',
       medicamento: '',
-      quantidade: 0
+      quantidade: 0,
+      cpf: '',
+      telefone: '',
+      endereco: '',
     });
     setModalVisible(false);
     setEditMode(false);
@@ -176,6 +187,9 @@ const CadastrarPaciente = () => {
       identidade: false,
       medicamento: false,
       quantidade: false,
+      cpf: false,
+      telefone: false,
+      endereco: false,
     });
   };
 
@@ -190,30 +204,38 @@ const CadastrarPaciente = () => {
         numeroCartaoSUS: '',
         identidade: '',
         medicamento: '',
-        quantidade: 0
+        quantidade: 0,
+        cpf: '',
+        telefone: '',
+        endereco: '',
       });
       setEditMode(false);
     }
     setModalVisible(true);
   };
- 
+
   const handleSelectPaciente = (paciente) => {
     setFormData(paciente);
-    // Rola até o nome do paciente clicado
     if (pacienteRefs.current[paciente.id]) {
       pacienteRefs.current[paciente.id].scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   };
 
+  const handleSearch = (searchTerm) => {
+    const filteredPacientes = pacientes.filter((paciente) =>
+      paciente.cpf.includes(searchTerm) || paciente.identidade.includes(searchTerm)
+    );
+    setPacientes(filteredPacientes);
+  };
+
   return (
     <div className="container" style={styles.container}>
       <h2 style={styles.title}>Lista de Pacientes</h2>
-      {/* Componente PesquisaPaciente passando a lista de pacientes */}
-      <PesquisaPaciente pacientes={pacientes} onSelectPaciente={handleSelectPaciente} />
+      <PesquisaPaciente pacientes={pacientes} onSelectPaciente={handleSelectPaciente} onSearch={handleSearch} />
 
       <div className="button-container">
         <Button variant="primary" onClick={() => openModal()} style={styles.addButton}>
-           Cadastrar Paciente
+          Cadastrar Paciente
         </Button>
 
         <p style={styles.paragrobaixo}>Faça seu cadastro aqui clicando no botão de cadastrar para poder dispensar seu medicamento!</p>
@@ -224,31 +246,32 @@ const CadastrarPaciente = () => {
       {pacientes.length === 0 ? (
         <Alert variant="info" style={styles.emptyText}>Nenhum paciente cadastrado.</Alert>
       ) : (
-      
-        <ListGroup>
-          {pacientes.map((paciente) => (
-            <ListGroup.Item
-              key={paciente.id}
-              style={styles.listGroupItem} // Aplica o estilo azul entre os cards e remove a linha branca
-              onClick={() => handleSelectPaciente(paciente)} // Passa o paciente selecionado
-              ref={(el) => pacienteRefs.current[paciente.id] = el} // Cria uma referência dinâmica para cada paciente
-            >
-              {/* Aqui você pode adicionar o conteúdo que deseja exibir dentro do ListGroup.Item, por exemplo: */}
-               <Card className="mb-3" style={styles.pacienteCard} key={paciente.id} onClick={() => openModal(paciente)}>
-                <Card.Body>
-                  <Card.Title>Nome: <span style={{ color: '#0066cc' }}>{paciente.nome}</span></Card.Title>
-                  <Card.Text>Medicamento: <span style={{ color: '#0066cc' }}>{paciente.medicamento}</span></Card.Text>
-                  <Card.Text>Quantidade: <span style={{ color: '#0066cc' }}>{paciente.quantidade}</span></Card.Text>
-                  <Card.Text>Número do Cartão SUS: <span style={{ color: '#0066cc' }}>{paciente.numeroCartaoSUS}</span></Card.Text>
-                  <Card.Text>Identidade: <span style={{ color: '#0066cc' }}>{paciente.identidade}</span></Card.Text>
-                </Card.Body>
-              </Card>
-            </ListGroup.Item>
-          ))}
-        </ListGroup>
+          <ListGroup>
+            {pacientes.map((paciente) => (
+              <ListGroup.Item
+                key={paciente.id}
+                style={styles.listGroupItem}
+                onClick={() => handleSelectPaciente(paciente)}
+                ref={(el) => pacienteRefs.current[paciente.id] = el}
+              >
+                <Card className="mb-3" style={styles.pacienteCard} key={paciente.id} onClick={() => openModal(paciente)}>
+                  <Card.Body>
+                    <Card.Title>Nome: <span style={{ color: '#0066cc' }}>{paciente.nome}</span></Card.Title>
+                    <Card.Text>Medicamento: <span style={{ color: '#0066cc' }}>{paciente.medicamento}</span></Card.Text>
+                    <Card.Text>Quantidade: <span style={{ color: '#0066cc' }}>{paciente.quantidade}</span></Card.Text>
+                    <Card.Text>Número do Cartão SUS: <span style={{ color: '#0066cc' }}>{paciente.numeroCartaoSUS}</span></Card.Text>
+                    <Card.Text>Identidade: <span style={{ color: '#0066cc' }}>{paciente.identidade}</span></Card.Text>
+                    <Card.Text>CPF: <span style={{ color: '#0066cc' }}>{paciente.cpf}</span></Card.Text> {/* Exibindo CPF */}
+                    <Card.Text>Telefone: <span style={{ color: '#0066cc' }}>{paciente.telefone}</span></Card.Text> {/* Exibindo Telefone */}
+                    <Card.Text>Endereço: <span style={{ color: '#0066cc' }}>{paciente.endereco}</span></Card.Text> {/* Exibindo Endereço */}
+                  </Card.Body>
+                </Card>
+              </ListGroup.Item>
+            ))}
+          </ListGroup>
       )}
 
-      <Modal show={modalVisible} onHide={resetForm} >
+      <Modal show={modalVisible} onHide={resetForm}>
         <Modal.Header style={{ backgroundColor: '#CCCCCC', padding: '20px', borderRadius: '8px' }} closeButton>
           <Modal.Title style={{ backgroundColor: '#CCCCCC' }}>{editMode ? 'Editar Paciente' : 'Adicionar Paciente'}</Modal.Title>
         </Modal.Header>
@@ -297,6 +320,54 @@ const CadastrarPaciente = () => {
               )}
             </Form.Group>
 
+            <Form.Group className="mb-3" controlId="cpf">
+              <Form.Label style={{ color: '#000000' }}>CPF</Form.Label>
+              <Form.Control
+                type="text"
+                placeholder="CPF"
+                value={formData.cpf}
+                onChange={(e) => handleInputChange('cpf', e.target.value)}
+                isInvalid={formErrors.cpf}
+              />
+              {formErrors.cpf && (
+                <Form.Control.Feedback type="invalid" style={{ marginTop: '-16px', fontSize: '14px', color: '#dc3545' }}>
+                  O CPF deve ter 11 dígitos numéricos.
+                </Form.Control.Feedback>
+              )}
+            </Form.Group>
+
+            <Form.Group className="mb-3" controlId="telefone">
+              <Form.Label style={{ color: '#000000' }}>Telefone</Form.Label>
+              <Form.Control
+                type="text"
+                placeholder="Telefone"
+                value={formData.telefone}
+                onChange={(e) => handleInputChange('telefone', e.target.value)}
+                isInvalid={formErrors.telefone}
+              />
+              {formErrors.telefone && (
+                <Form.Control.Feedback type="invalid" style={{ marginTop: '-16px', fontSize: '14px', color: '#dc3545' }}>
+                  O telefone deve ser válido.
+                </Form.Control.Feedback>
+              )}
+            </Form.Group>
+
+            <Form.Group className="mb-3" controlId="endereco">
+              <Form.Label style={{ color: '#000000' }}>Endereço</Form.Label>
+              <Form.Control
+                type="text"
+                placeholder="Endereço"
+                value={formData.endereco}
+                onChange={(e) => handleInputChange('endereco', e.target.value)}
+                isInvalid={formErrors.endereco}
+              />
+              {formErrors.endereco && (
+                <Form.Control.Feedback type="invalid" style={{ marginTop: '-16px', fontSize: '14px', color: '#dc3545' }}>
+                  O endereço é obrigatório.
+                </Form.Control.Feedback>
+              )}
+            </Form.Group>
+
             <Form.Group className="mb-3" controlId="medicamento">
               <Form.Label style={{ color: '#000000' }}>Medicamento</Form.Label>
               <Form.Control
@@ -339,15 +410,12 @@ export default CadastrarPaciente;
 const styles = {
   container: {
     padding: '20px',
-    // backgroundColor: '#78C2FF',
     backgroundColor: '#fff'
-    //'#f5f5f5'
   },
   title: {
     fontSize: '22px',
     fontWeight: 'bold',
     marginBottom: '20px',
-  
   },
   buttonContainer: {
     display: 'flex',  
@@ -367,9 +435,8 @@ const styles = {
   addImg: {
     position: 'relative',
     left: '470px',
-    height: '420px', 
-    width: '387px', 
-    
+    height: '420px',
+    width: '387px',
   },
   paragrobaixo: {
     fontSize: '16px',
@@ -380,8 +447,6 @@ const styles = {
     padding: '10px',
     borderRadius: '5px',
   },
-
-
   locationText: {
     fontSize: '16px',
     fontWeight: 'bold',
@@ -404,8 +469,7 @@ const styles = {
     borderRadius: '5px',
     marginBottom: '10px',
     boxShadow: '0 2px 3px rgba(0, 0, 0, 0.2)',
-    border: '1px solid #78C2FF', // Borda azul suave
-    Color: 'transparent', // Fundo transparente (se necessário)
+    border: '1px solid #78C2FF',
   },
   pacienteTitulo: {
     fontSize: '18px',
@@ -418,10 +482,10 @@ const styles = {
     fontWeight: '500',
   },
   listGroupItem: {
-    backgroundColor: '#78C2FF', // Azul entre os cards
-    marginBottom: '0px', // Ajuste de margem entre os cards
-    padding: '0px', // Remove o preenchimento extra
-    border: 'none', // Remove a borda extra
-    borderRadius: '8px', // Borda arredondada entre os cards
+    backgroundColor: '#78C2FF',
+    marginBottom: '0px',
+    padding: '0px',
+    border: 'none',
+    borderRadius: '8px',
   },
 };
