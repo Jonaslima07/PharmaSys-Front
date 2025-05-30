@@ -33,13 +33,23 @@ const HeaderLoggedIn = ({ onLogout }) => {
           <Nav className="ml-auto">
             <Nav.Link
               as={Link}
+              to="/dashboard"
+              style={{ ...linkStyle, ...(hovered || clicked ? { color: '#78C2FF' } : {}) }}
+              onMouseEnter={handleMouseEnter}
+              onMouseLeave={handleMouseLeave}
+              onClick={handleMouseClick}
+            >
+              Dashboard
+            </Nav.Link>
+            <Nav.Link
+              as={Link}
               to="/historicomedicamentos"
               style={{ ...linkStyle, ...(hovered || clicked ? { color: '#78C2FF' } : {}) }}
               onMouseEnter={handleMouseEnter}
               onMouseLeave={handleMouseLeave}
               onClick={handleMouseClick}
             >
-              Historico
+              Histórico de Medicamentos
             </Nav.Link>
             <Nav.Link
               as={Link}
@@ -71,6 +81,16 @@ const HeaderLoggedIn = ({ onLogout }) => {
             >
               Cadastrar Lotes
             </Nav.Link>
+            <Nav.Link
+              as={Link}
+              to="/profile"
+              style={{ ...linkStyle, ...(hovered || clicked ? { color: '#78C2FF' } : {}) }}
+              onMouseEnter={handleMouseEnter}
+              onMouseLeave={handleMouseLeave}
+              onClick={handleMouseClick}
+            >
+              Perfil
+            </Nav.Link>
 
             <Button variant="link" onClick={handleShowModal} style={linkStyle}>
               Sair
@@ -96,7 +116,7 @@ const HeaderLoggedIn = ({ onLogout }) => {
         </Modal.Footer>
       </Modal>
 
-    <div style={footerStyles.divBelowFooter}></div>
+      <div style={footerStyles.divBelowFooter}></div>
     </>
   );
 };
@@ -105,7 +125,7 @@ export default HeaderLoggedIn;
 
 // Constantes de CSS
 const navbarStyle = {
-  backgroundColor: '#000',
+  backgroundColor: '#000', // Cor de fundo preta
 };
 
 const linkStyle = {
@@ -113,8 +133,8 @@ const linkStyle = {
   fontWeight: '600',
   fontSize: '16px',
   position: 'relative',
-  marginRight: '90px',
-  left: '230px',
+  left:'100px',
+  marginRight: '30px', // Reduziu o espaço à direita
   display: 'inline-block',
 };
 

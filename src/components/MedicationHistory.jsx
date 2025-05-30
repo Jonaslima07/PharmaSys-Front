@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FaFileAlt } from 'react-icons/fa'; // Ícone de arquivo (documento)
 
-
 const MedicationHistory = () => {
   const [medications, setMedications] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -9,6 +8,8 @@ const MedicationHistory = () => {
   const [sortBy, setSortBy] = useState('date-desc');  // Ordem padrão por data (mais recente)
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);  // Página atual
+  const [itemsPerPage, setItemsPerPage] = useState(10);  // Número de itens por página
 
   useEffect(() => {
     const fetchData = async () => {
@@ -16,24 +17,12 @@ const MedicationHistory = () => {
       try {
         // Tenta buscar os históricos do servidor
         const response = await fetch('http://localhost:5000/historicos');
-        if (!response.ok) {
-          // Se não encontrar, usa dados mockados
-          const mockData = [
-            {
-              id: 1,
-              medicamento: "Metformina 850mg",
-              paciente: "João Costa",
-              data: "2025-05-17T00:00:00.000Z",
-              dispensadoPor: "Dra. Malta Santos",
-              lote: "L12345",
-              quantidade: 1 // Adicionando a quantidade dispensada
-            }
-          ];
-          setMedications(mockData);
-          return;
+        if (response.ok) {
+          const data = await response.json();
+          setMedications(data);  // Atualiza o estado com os dados reais
+        } else {
+          setError('Falha ao carregar os dados.');
         }
-        const data = await response.json();
-        setMedications(data);
       } catch (err) {
         setError(err.message);
         console.error("Erro ao carregar histórico:", err);
@@ -78,10 +67,19 @@ const MedicationHistory = () => {
     }
   });
 
+  // Calcular os medicamentos a serem exibidos na página atual
+  const indexOfLastMedication = currentPage * itemsPerPage;
+  const indexOfFirstMedication = indexOfLastMedication - itemsPerPage;
+  const currentMedications = sortedMedications.slice(indexOfFirstMedication, indexOfLastMedication);
+
+  // Total de páginas
+  const totalPages = Math.ceil(filteredMedications.length / itemsPerPage);
+
   const handleReset = () => {
     setSearchTerm('');
     setFilterPatient('');
     setSortBy('date-desc');
+    setCurrentPage(1); // Resetar para a primeira página
   };
 
   const formatDate = (dateString) => {
@@ -146,7 +144,7 @@ const MedicationHistory = () => {
       </div>
       
       <div style={styles.resultsInfo}>
-        {sortedMedications.length} resultados encontrados
+        {filteredMedications.length} resultados encontrados
         <button onClick={handleReset} style={styles.resetButton}>
           Limpar Filtros
         </button>
@@ -154,7 +152,7 @@ const MedicationHistory = () => {
       
       {/* Lista de medicamentos */}
       <div style={styles.medicationsList}>
-        {sortedMedications.map(med => (
+        {currentMedications.map(med => (
           <div key={med.id} style={styles.medicationCard}>
             <div style={styles.iconContainer}>
                <FaFileAlt style={styles.medicationIcon} /> {/* Ícone de documento */}
@@ -162,6 +160,7 @@ const MedicationHistory = () => {
             <h3 style={styles.medicationName}>{med.medicamento}</h3>
             <p style={styles.medicationInfo}>Paciente: {med.paciente}</p>
             <p style={styles.medicationInfo}><strong>Quantidade dispensada:</strong> {med.quantidade}</p>
+            <p style={styles.medicationInfo}><strong>Gramas:</strong> {med.gramas || 'N/A'}</p> {/* Exibindo as gramas */}
             <div style={styles.medicationFooter}>
               <span>Dispensado em: {formatDate(med.data)}</span>
               <span>Por: {med.dispensadoPor}</span>
@@ -172,17 +171,34 @@ const MedicationHistory = () => {
       
       {/* Paginação */}
       <div style={styles.pagination}>
-        <button style={styles.pageButton}>Anterior</button>
-        <button style={styles.activePageButton}>1</button>
-        <button style={styles.pageButton}>2</button>
-        <button style={styles.pageButton}>3</button>
-        <span>...</span>
-        <button style={styles.pageButton}>10</button>
-        <button style={styles.pageButton}>Próximo</button>
+        <button
+          style={styles.pageButton}
+          onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+          disabled={currentPage === 1}
+        >
+          Anterior
+        </button>
+        {[...Array(totalPages)].map((_, index) => (
+          <button
+            key={index}
+            style={currentPage === index + 1 ? styles.activePageButton : styles.pageButton}
+            onClick={() => setCurrentPage(index + 1)}
+          >
+            {index + 1}
+          </button>
+        ))}
+        <button
+          style={styles.pageButton}
+          onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+          disabled={currentPage === totalPages}
+        >
+          Próximo
+        </button>
       </div>
     </div>
   );
 };
+
 // Estilos movidos para uma constante conforme solicitado
 const styles = {
   container: {
@@ -191,7 +207,7 @@ const styles = {
     padding: '20px',
     fontFamily: 'Arial, sans-serif'
   },
-   iconContainer: {
+  iconContainer: {
     marginRight: '15px',
     width: '40px',
     height: '40px',

@@ -104,7 +104,7 @@ const LoginForm = () => {
           role: data.user.role,
           token: data.token
         }));
-        navigate('/cadastropaciente'); // Redirecionando após login com sucesso
+        navigate('/cadastrarlotes'); // Redirecionando após login com sucesso
       }
     } catch (error) {
       console.error('Erro no login com Google:', error);

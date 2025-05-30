@@ -16,6 +16,12 @@ const Dispensacaocomp = () => {
   const [pacientes, setPacientes] = useState([]);
   const [noPatients, setNoPatients] = useState(false);
 
+  // Função para pegar o nome do usuário logado
+  const getUserLogged = () => {
+    const userData = JSON.parse(localStorage.getItem("userData"));
+    return userData ? userData.name : "Desconhecido";
+  };
+
   const getImageSource = (imageData) => {
     if (!imageData) return "/default-image.png";
     if (typeof imageData === 'string' && imageData.startsWith('data:image')) return imageData;
@@ -91,7 +97,7 @@ const Dispensacaocomp = () => {
     setCartaoSus(selectedPaciente?.numeroCartaoSUS || "");
   };
 
-  const confirmarDispensacao = async () => {
+      const confirmarDispensacao = async () => {
     if (!selectedMed) return;
 
     if (!dispensadoPor.trim()) {
@@ -135,8 +141,8 @@ const Dispensacaocomp = () => {
           cartaoSus: cartaoSus,
           data: new Date().toISOString(),
           medicamentoId: selectedMed.id,
-          dosagem: "1 comprimido após as refeições",
-          dispensadoPor: "Dra. Malta Santos"
+          gramas: selectedMed.grams,
+          dispensadoPor: getUserLogged()  // Pega o nome do usuário logado
         };
 
         // 3. Tenta salvar no histórico e usa fallback local se falhar
@@ -158,9 +164,13 @@ const Dispensacaocomp = () => {
           setHistorico(prev => [...prev, novoRegistro]);
         }
 
-        // 4. Atualiza a UI, removendo o medicamento da lista se a quantidade for zero
-        setMedicamentos(prev =>
-          prev.filter(item => item.id !== selectedMed.id || item.quantity > 0)
+        // 4. Atualiza o estado diretamente, removendo o medicamento da lista ou atualizando a quantidade
+        setMedicamentos(prev => 
+          prev.map(item => 
+            item.id === selectedMed.id
+              ? { ...item, quantity: novaQuantidade }
+              : item
+          )
         );
 
         setSuccessMsg(`${quantidade} unidade(s) de ${selectedMed.medicationName} dispensada(s) para ${dispensadoPor}.`);
