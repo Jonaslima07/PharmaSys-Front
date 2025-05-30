@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import './logincss.css';
+import { GoogleLogin } from '@react-oauth/google'; // Importar GoogleLogin
 
 const CriarContaForm = () => {
   const [name, setName] = useState('');
@@ -15,6 +16,7 @@ const CriarContaForm = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState('success');
+  const [jwtToken, setJwtToken] = useState('');
 
   const navigate = useNavigate();
 
@@ -29,17 +31,14 @@ const CriarContaForm = () => {
     }
   };
 
-  
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
   };
 
-  
   const toggleConfirmPasswordVisibility = () => {
     setShowConfirmPassword(!showConfirmPassword);
   };
 
-   
   const showToast = (message, type) => {
     setToastMessage(message);
     setToastType(type);
@@ -48,7 +47,6 @@ const CriarContaForm = () => {
     }, 3000);
   };
 
-  
   const createUser = async (userData) => {
     try {
       const response = await fetch('http://localhost:5000/users', {
@@ -65,7 +63,7 @@ const CriarContaForm = () => {
     }
   };
 
-    const handleSubmit = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!name || !email || !birthDate || !password || password !== confirmPassword) {
@@ -103,7 +101,7 @@ const CriarContaForm = () => {
       
       // Redireciona para a tela de login após 2 segundos
       setTimeout(() => {
-        navigate('/login'); // Altere para o caminho correto da sua rota de login
+        navigate('/login');
       }, 2000);
       
     } catch (error) {
@@ -114,6 +112,32 @@ const CriarContaForm = () => {
     }
   };
 
+  // Função de login com Google
+  const handleGoogleLoginSuccess = async (response) => {
+    const googleToken = response.credential;  // O token do Google
+    try {
+      // Enviar o token do Google para a API para obter um JWT
+      const res = await fetch('http://localhost:5000/auth/google/callback', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${googleToken}`,
+        },
+      });
+
+      const data = await res.json();
+      if (data.token) {
+        setJwtToken(data.token);  // Armazenar JWT na variável de estado
+        navigate('/cadastropaciente');  // Redirecionando para a página protegida
+      }
+    } catch (error) {
+      console.error('Erro no login com Google:', error);
+    }
+  };
+
+  const handleGoogleLoginError = (error) => {
+    console.error('Erro no login com Google:', error);
+  };
+  
   return (
     <div style={styles.authContainer}>
       <div style={styles.authLeft}>
@@ -138,6 +162,7 @@ const CriarContaForm = () => {
           )}
 
           <form onSubmit={handleSubmit} style={styles.form}>
+            {/* Campo para Nome */}
             <div style={styles.formGroup}>
               <label htmlFor="name" style={styles.label1}>Nome completo</label>
               <input
@@ -151,6 +176,7 @@ const CriarContaForm = () => {
               />
             </div>
 
+            {/* Campo para Email */}
             <div style={styles.formGroup}>
               <label htmlFor="email" style={styles.label2}>Email</label>
               <input
@@ -164,6 +190,7 @@ const CriarContaForm = () => {
               />
             </div>
 
+            {/* Campo para Data de Nascimento */}
             <div style={styles.formGroup}>
               <label htmlFor="birthDate" style={styles.labelBirthDate}>Data de Nascimento</label>
               <input
@@ -176,6 +203,7 @@ const CriarContaForm = () => {
               />
             </div>
 
+            {/* Campo para Função */}
             <div style={styles.formGroup}>
               <label htmlFor="role" style={styles.label3}>Função</label>
               <div>
@@ -187,11 +215,12 @@ const CriarContaForm = () => {
                   style={styles.input3}
                 >
                   <option value="farmaceutico">Farmacêutico</option>
-                  <option value="usuario">Usuário</option>
+                  <option value="paciente">Paciente</option>
                 </select>
               </div>
             </div>
 
+            {/* Campos para Senha */}
             <div style={styles.formGroup}>
               <label htmlFor="password" style={styles.label4}>Senha</label>
               <div style={styles.passwordContainer}>
@@ -200,7 +229,7 @@ const CriarContaForm = () => {
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="digite a senha"
+                  placeholder="Digite a senha"
                   disabled={isLoading}
                   style={styles.input4}
                 />
@@ -218,7 +247,7 @@ const CriarContaForm = () => {
                   type={showConfirmPassword ? "text" : "password"}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="confirme a senha"
+                  placeholder="Confirme a senha"
                   disabled={isLoading}
                   style={styles.input5}
                 />
@@ -242,6 +271,20 @@ const CriarContaForm = () => {
               )}
             </button>
           </form>
+            
+          <div style={styles.googleWrapper}>
+            <div style={styles.googleInnerWrapper}>  
+              <GoogleLogin
+                onSuccess={handleGoogleLoginSuccess}
+                onError={handleGoogleLoginError}
+                useOneTap
+                shape="pill"
+                theme="outline"
+                size="large"
+              />
+            </div>
+          </div>
+
 
           <p style={styles.registerLink}>
             Já tem uma conta? <Link to="/login" style={styles.link}>Faça login</Link>
@@ -252,8 +295,26 @@ const CriarContaForm = () => {
   );
 };
 
+
 const styles = {
   
+   googleWrapper: {
+  position: 'relative',
+  width: '422px',
+  left: '-100px',
+  top: '-180px',
+  marginTop: '10px',
+  display: 'flex',
+  justifyContent: 'center',
+  backgroundColor: 'transparent', // garante que o fundo não interfira
+  zIndex: 1, // garante que fique acima de outros elementos se necessário
+},
+googleInnerWrapper: {
+  transform: 'scale(0.9)',
+  width: '100%',
+  display: 'flex',
+  justifyContent: 'center'
+},
 
   passwordContainer: {
     position: 'relative',

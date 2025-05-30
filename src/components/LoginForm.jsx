@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import './logincss.css';
+import { GoogleLogin } from '@react-oauth/google'; // Importar GoogleLogin
 
 const LoginForm = () => {
   const [email, setEmail] = useState('');
@@ -10,7 +11,6 @@ const LoginForm = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState('success');
-
   const navigate = useNavigate();
 
   const showToast = (message, type) => {
@@ -74,7 +74,7 @@ const LoginForm = () => {
 
       showToast('Login realizado com sucesso!', 'success');
       
-      // Redirecionando para o Dashboard
+      // Redirecionando para o cadastro
       setTimeout(() => navigate('/cadastropaciente'), 1500);
       
     } catch (error) {
@@ -82,6 +82,37 @@ const LoginForm = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleGoogleLoginSuccess = async (response) => {
+    const googleToken = response.credential;  // O token do Google
+    try {
+      // Enviar o token do Google para a API para obter um JWT
+      const res = await fetch('http://localhost:5000/auth/google/callback', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${googleToken}`,
+        },
+      });
+
+      const data = await res.json();
+      if (data.token) {
+        localStorage.setItem('userData', JSON.stringify({
+          id: data.user.id,
+          name: data.user.name,
+          email: data.user.email,
+          role: data.user.role,
+          token: data.token
+        }));
+        navigate('/cadastropaciente'); // Redirecionando após login com sucesso
+      }
+    } catch (error) {
+      console.error('Erro no login com Google:', error);
+    }
+  };
+
+  const handleGoogleLoginError = (error) => {
+    console.error('Erro no login com Google:', error);
   };
 
   return (
@@ -167,6 +198,20 @@ const LoginForm = () => {
             <p style={styles.demoText3}>Senha: password</p>
           </div>
 
+
+          <div style={styles.googleWrapper}>
+              <div style={styles.googleInnerWrapper}>  
+                 <GoogleLogin
+                    onSuccess={handleGoogleLoginSuccess}
+                    onError={handleGoogleLoginError}
+                    useOneTap
+                    shape="pill"
+                    theme="outline"
+                    size="large"
+                  />
+              </div>
+          </div>
+
           <p style={styles.registerLink}>
             Não possui uma conta? <Link to="/CriarConta" style={styles.link}>Crie uma agora</Link>
           </p>
@@ -184,6 +229,25 @@ const styles = {
     width: '1500px' 
 
   },
+
+  googleWrapper: {
+  position: 'relative',
+  width: '422px',
+  left: '-100px',
+  top: '-190px',
+  marginTop: '70px',
+  display: 'flex',
+  justifyContent: 'center',
+  backgroundColor: 'transparent', // garante que o fundo não interfira
+  zIndex: 1, // garante que fique acima de outros elementos se necessário
+},
+  googleInnerWrapper: {
+    transform: 'scale(0.9)',
+    width: '100%',
+    display: 'flex',
+    justifyContent: 'center'
+  },
+
   authLeft: {
     flex: 1,
     backgroundColor: '#001f3d',
@@ -362,7 +426,7 @@ const styles = {
     borderRadius: '6px',
     border: '1px solid #ddd',
     left: '-100px',
-    top:'-6px',
+    top:'60px',
     height:'80px',
     
     
@@ -390,7 +454,7 @@ const styles = {
     color: '#78C2FF',
     position:'relative',
     left:'-113px',
-    top:'-145px'
+    top:'-205px'
     
     
   },

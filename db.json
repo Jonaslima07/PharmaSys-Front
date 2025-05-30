@@ -46,8 +46,34 @@
       "role": "usuario",
       "password": "123456",
       "createdAt": "2025-05-23T22:51:43.278Z"
+    },
+    {
+      "id": "dc48",
+      "name": "joao silva",
+      "email": "j.silva16@gmail.com",
+      "birthDate": "1997-06-17",
+      "role": "paciente",
+      "password": "200216joao",
+      "createdAt": "2025-05-29T17:22:34.518Z"
+    },
+    {
+      "id": "96f2",
+      "name": "rike costa silva",
+      "email": "rike.costa99@gmail.com",
+      "birthDate": "1993-11-17",
+      "role": "farmaceutico",
+      "password": "200216henrique",
+      "createdAt": "2025-05-29T18:24:15.838Z"
     }
   ],
+  
+   "auth": {
+    "google": {
+      "tokens": []
+    }
+  },
+  
+
   "pacientes": [
     {
       "id": "1748049602419",
