@@ -13,7 +13,13 @@ const PaginaInicial = () => {
             <Col md={6}>
               <h1 className="display-4">Bem-vindo ao PharmaSys</h1>
               <p className="lead">Sistema de Gerenciamento de Medicamentos e Pacientes</p>
-              <Button variant="outline-primary" className="mt-3">Entrar</Button>
+               <Button 
+                  variant="outline-primary" 
+                  className="mt-3"
+                  href="/login" 
+                >
+                Entrar
+                </Button>
             </Col>
             <Col md={6}>
               {/*<img src="" alt="" className="img-fluid" />*/}  {/* caso mude de ideia para as imagens */}
