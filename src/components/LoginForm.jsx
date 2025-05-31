@@ -65,10 +65,13 @@ const LoginForm = () => {
       
       // Armazenando dados do usuário no localStorage
       localStorage.setItem('userData', JSON.stringify({
-        id: user.id,
+         id: user.id,
         name: user.name,
         email: user.email,
         role: user.role,
+        phone: user.phone,
+        registrationId: user.registrationId,
+        createdAt: user.createdAt,
         token: 'fake-jwt-token' // Em produção, usar token real
       }));
 

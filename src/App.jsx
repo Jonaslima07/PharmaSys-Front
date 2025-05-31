@@ -1,5 +1,5 @@
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
-import { GoogleOAuthProvider } from '@react-oauth/google'; // Importe o GoogleOAuthProvider
+import { GoogleOAuthProvider } from '@react-oauth/google'; // o GoogleOAuthProvider
 import Layout from './templates/Layout.jsx';
 import Home from './views/Home.jsx';
 import CriarConta from './views/CriarConta.jsx';
@@ -8,8 +8,10 @@ import CadastroPaciente from './views/CadastroPaciente.jsx';
 import Login from './views/Login.jsx';
 import NoPage from './views/NoPage.jsx';
 import CadastroDlotes from './views/CadastroDlotes.jsx';
-import MedHistorico from './views/MedHistorico.jsx'; // Importe o Dashboard
+import MedHistorico from './views/MedHistorico.jsx'; 
 import Homelogar from './components/homelogar.jsx';
+//import Dashboard from './views/DashBoard.jsx'; // Importe o componente Dashboard
+import Profile from './views/Profile.jsx'; // Importe o componente Profile
 
 function App() {
   const router = createBrowserRouter([
@@ -49,6 +51,14 @@ function App() {
         {
           path: 'historicomedicamentos', 
           element: <MedHistorico />, 
+        },
+        {
+          //path: 'dashboard', // Nova rota adicionada
+          //element: <DashBoard />,
+        },
+        {
+          path: 'profile', // Nova rota adicionada
+          element: <Profile />,
         },
       ],
     },

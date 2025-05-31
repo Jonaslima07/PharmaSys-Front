@@ -11,6 +11,8 @@ const CriarContaForm = () => {
   const [role, setRole] = useState('farmaceutico');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [phone, setPhone] = useState(''); // Adicionando telefone
+  const [registrationId, setRegistrationId] = useState(''); // Adicionando registro profissional
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -66,7 +68,7 @@ const CriarContaForm = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!name || !email || !birthDate || !password || password !== confirmPassword) {
+    if (!name || !email || !birthDate || !phone || !registrationId || !password || password !== confirmPassword) {
       showToast('Por favor, preencha todos os campos corretamente.', 'error');
       return;
     }
@@ -91,8 +93,10 @@ const CriarContaForm = () => {
         email,
         birthDate,
         role,
+        phone,
+        registrationId,
         password,
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
       };
 
       await createUser(newUser);
@@ -137,6 +141,7 @@ const CriarContaForm = () => {
   const handleGoogleLoginError = (error) => {
     console.error('Erro no login com Google:', error);
   };
+  
   
   return (
     <div style={styles.authContainer}>
@@ -203,21 +208,32 @@ const CriarContaForm = () => {
               />
             </div>
 
-            {/* Campo para Função */}
+            {/* Novo campo para Telefone */}
             <div style={styles.formGroup}>
-              <label htmlFor="role" style={styles.label3}>Função</label>
-              <div>
-                <select
-                  id="role"
-                  value={role}
-                  onChange={(e) => setRole(e.target.value)}
-                  disabled={isLoading}
-                  style={styles.input3}
-                >
-                  <option value="farmaceutico">Farmacêutico</option>
-                  <option value="paciente">Paciente</option>
-                </select>
-              </div>
+              <label htmlFor="phone" style={styles.label3}>Número de Telefone</label>
+              <input
+                id="phone"
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="Digite seu telefone"
+                disabled={isLoading}
+                style={styles.input3}
+              />
+            </div>
+
+            {/* Novo campo para Registro Profissional */}
+            <div style={styles.formGroup}>
+              <label htmlFor="registrationId" style={styles.labelRegistration}>Registro Profissional</label>
+              <input
+                id="registrationId"
+                type="text"
+                value={registrationId}
+                onChange={(e) => setRegistrationId(e.target.value)}
+                placeholder="registro profissional"
+                disabled={isLoading}
+                style={styles.inputRegistration}
+              />
             </div>
 
             {/* Campos para Senha */}
@@ -298,7 +314,7 @@ const CriarContaForm = () => {
 
 const styles = {
   
-   googleWrapper: {
+  googleWrapper: {
   position: 'relative',
   width: '422px',
   left: '-100px',
@@ -309,12 +325,12 @@ const styles = {
   backgroundColor: 'transparent', // garante que o fundo não interfira
   zIndex: 1, // garante que fique acima de outros elementos se necessário
 },
-googleInnerWrapper: {
-  transform: 'scale(0.9)',
-  width: '100%',
-  display: 'flex',
-  justifyContent: 'center'
-},
+  googleInnerWrapper: {
+    transform: 'scale(0.9)',
+    width: '100%',
+    display: 'flex',
+    justifyContent: 'center'
+  },
 
   passwordContainer: {
     position: 'relative',
@@ -351,6 +367,7 @@ googleInnerWrapper: {
     height: '100vh',
     backgroundColor: 'white',
     width: '1500px',
+    overflow: 'hidden', // Remover overflow indesejado (apenas um overflow permitido)
   },
   authLeft: {
     flex: 1,
@@ -387,6 +404,7 @@ googleInnerWrapper: {
     justifyContent: 'center',
     alignItems: 'center',
     padding: '2rem',
+    
   },
   authContent: {
     width: '100%',
@@ -398,7 +416,7 @@ googleInnerWrapper: {
     fontWeight: 'bold',
     color: '#001f3d',
     position: 'relative',
-    top:'143px',
+    top:'245px',
     left:'45px',
   },
   subtitle: {
@@ -406,7 +424,7 @@ googleInnerWrapper: {
     color: '#666',
     marginBottom: '2rem',
     position: 'relative',
-    top:'145px',
+    top:'245px',
     left:'-30px',
 
   },
@@ -430,7 +448,7 @@ googleInnerWrapper: {
     fontSize: '14px',
     boxSizing: 'border-box',
     position: 'relative',
-    top:'70px',
+    top:'175px',
   },
 
   labelBirthDate: {
@@ -440,7 +458,7 @@ googleInnerWrapper: {
     marginBottom: '0.5rem',
     fontWeight: '500',
     position: 'relative',
-    top:'70px',
+    top:'175px',
   },
 
   label1: {
@@ -450,7 +468,7 @@ googleInnerWrapper: {
     marginBottom: '0.5rem',
     fontWeight: '500',
     position: 'relative',
-    top:'139px',
+    top:'239px',
   },
 
   label2: {
@@ -460,7 +478,7 @@ googleInnerWrapper: {
     marginBottom: '0.5rem',
     fontWeight: '500',
     position: 'relative',
-    top:'103px',
+    top:'209px',
   },
   label3: {
     display: 'block',
@@ -469,16 +487,10 @@ googleInnerWrapper: {
     marginBottom: '0.5rem',
     fontWeight: '500',
     position: 'relative',
-    top:'32px',
+    top:'148px',
+    left:'220px'
   },
 
-   select: {
-    appearance: 'none',
-    backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e")`,
-    backgroundRepeat: 'no-repeat',
-    backgroundPosition: 'right 10px center',
-    backgroundSize: '1em',
-  },
   label4: {
     display: 'block',
     fontSize: '14px',
@@ -507,7 +519,7 @@ googleInnerWrapper: {
     fontSize: '14px',
     boxSizing: 'border-box',
     position: 'relative',
-    top:'137px',
+    top:'238px',
   },
 
   input2: {
@@ -518,22 +530,44 @@ googleInnerWrapper: {
     fontSize: '14px',
     boxSizing: 'border-box',
     position: 'relative',
-    top:'100px',
+    top:'210px',
   },
 
-  
-  input3: {
-    width: '418px',
+   // Novo estilo para o input do registro profissional
+  inputRegistration: {
+    width: '200px',
     padding: '10px',
     borderRadius: '6px',
     border: '1px solid #ddd',
     fontSize: '14px',
     boxSizing: 'border-box',
     position: 'relative',
-    top: '30px', 
-    
+    top: '30px',
   },
 
+    // Novo estilo para o label do registro profissional
+  labelRegistration: {
+    display: 'block',
+    fontSize: '14px',
+    color: '#333',
+    marginBottom: '0.5rem',
+    fontWeight: '500',
+    position: 'relative',
+    top: '32px',
+  },
+
+  
+  input3: {
+    width: '200px',
+    padding: '10px',
+    borderRadius: '6px',
+    border: '1px solid #ddd',
+    fontSize: '14px',
+    boxSizing: 'border-box',
+    position: 'relative',
+    top: '145px',
+    left:'220px'
+  },
   
   input4: {
     width: '200px',
@@ -594,11 +628,11 @@ googleInnerWrapper: {
   toast: {
     padding: '12px',
     borderRadius: '6px',
-    marginBottom: '-4rem',
+    marginBottom: '-6rem',
     fontSize: '14px',
     position: 'relative',
-    left:'40px',
-    top:'-224',
+    left:'240px',
+    top:'50px',
 
     boxShadow: '0 2px 10px rgba(0, 0, 0, 0.1)',
   },
