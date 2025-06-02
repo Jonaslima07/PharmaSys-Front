@@ -9,7 +9,7 @@ import Login from './views/Login.jsx';
 import NoPage from './views/NoPage.jsx';
 import CadastroDlotes from './views/CadastroDlotes.jsx';
 import MedHistorico from './views/MedHistorico.jsx'; 
-import Homelogar from './components/homelogar.jsx';
+import Homelogar from './components/Homelogar.jsx';
 //import Dashboard from './views/DashBoard.jsx'; // Importe o componente Dashboard
 import Profile from './views/Profile.jsx'; // Importe o componente Profile
 

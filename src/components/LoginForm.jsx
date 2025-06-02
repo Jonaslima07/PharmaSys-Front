@@ -462,7 +462,7 @@ const styles = {
     
   },
   link: {
-    color: '#001f3d',
+    //color: '#001f3d',
     textDecoration: 'none',
     fontWeight: '500',
     color: '#78C2FF',

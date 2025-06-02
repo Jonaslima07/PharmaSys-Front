@@ -772,7 +772,6 @@ const styles = {
     background: "none",
     cursor: "pointer",
     color: "#7f8c8d",
-    cursor: "pointer",
     position:'relative',
     top:'-30px',
   },
@@ -885,11 +884,6 @@ const styles = {
     fontWeight: "500",
     marginBottom: "16px",
   },
-  divider: {
-    height: "1px",
-    backgroundColor: "#ecf0f1",
-    margin: "16px 0",
-  },
   section: {
     marginBottom: "16px",
   },
@@ -970,9 +964,7 @@ const styles = {
     color: "#7f8c8d",
   },
   eyeButton2: {
-    position: "absolute",
     right: "10px",
-    top: "50%",
     transform: "translateY(-50%)",
     background: "none",
     border: "none",
@@ -983,9 +975,7 @@ const styles = {
     top:'27px',
   },
   eyeButton3: {
-    position: "absolute",
     right: "10px",
-    top: "50%",
     transform: "translateY(-50%)",
     background: "none",
     border: "none",
