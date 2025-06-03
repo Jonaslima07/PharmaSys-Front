@@ -209,6 +209,14 @@ const Dispensacaocomp = () => {
     <div style={styles.container}>
       <h1 style={styles.title}>Dispensação de Medicamentos</h1>
 
+      
+      {successMsg && (
+        <div style={styles.successMessage}>
+          <h4>Sucesso</h4>
+          <p>{successMsg}</p>
+        </div>
+      )}
+
       {noPatients && (
         <div style={styles.noPatientsAlert}>
           <h4>Nenhum paciente cadastrado no sistema</h4>
@@ -254,13 +262,6 @@ const Dispensacaocomp = () => {
       )}
       <hr style={styles.hr} />
       
-      {successMsg && (
-        <div style={styles.successMessage}>
-          <h4>Sucesso</h4>
-          <p>{successMsg}</p>
-        </div>
-      )}
-
       <Modal show={showModal} onHide={() => setShowModal(false)}>
         <Modal.Header closeButton style={styles.modalHeader}>
           <Modal.Title style={styles.modaltitle}>Dispensar Medicamento
