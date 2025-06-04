@@ -1,5 +1,5 @@
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
-import { GoogleOAuthProvider } from '@react-oauth/google'; // o GoogleOAuthProvider
+import { GoogleOAuthProvider } from '@react-oauth/google';
 import Layout from './templates/Layout.jsx';
 import Home from './views/Home.jsx';
 import CriarConta from './views/CriarConta.jsx';
@@ -10,14 +10,14 @@ import NoPage from './views/NoPage.jsx';
 import CadastroDlotes from './views/CadastroDlotes.jsx';
 import MedHistorico from './views/MedHistorico.jsx'; 
 import Homelogar from './components/Homelogar.jsx';
-//import Dashboard from './views/DashBoard.jsx'; // Importe o componente Dashboard
-import Profile from './views/Profile.jsx'; // Importe o componente Profile
+//import Dashboard from './views/DashBoard.jsx'; //  o componente Dashboard esta em desenvolvimento
+import Profile from './views/Profile.jsx'; 
 
 function App() {
   const router = createBrowserRouter([
     {
       path: '/',
-      element: <Layout />, // Usa o Layout que contém o Header condicional
+      element: <Layout />, 
       errorElement: <NoPage />,
       children: [
         {
@@ -25,7 +25,7 @@ function App() {
           element: <Home />,
         },
         {
-          path: 'homelogar', // página home quando logar
+          path: 'homelogar', 
           element: <Homelogar />,  
         },
         {
@@ -53,11 +53,11 @@ function App() {
           element: <MedHistorico />, 
         },
         {
-          //path: 'dashboard', // Nova rota adicionada
+          //path: 'dashboard', // em desenvolvimento
           //element: <DashBoard />,
         },
         {
-          path: 'profile', // Nova rota adicionada
+          path: 'profile', 
           element: <Profile />,
         },
       ],

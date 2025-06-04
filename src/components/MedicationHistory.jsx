@@ -15,11 +15,11 @@ const MedicationHistory = () => {
     const fetchData = async () => {
       setIsLoading(true);
       try {
-        // Tenta buscar os históricos do servidor
+        
         const response = await fetch('http://localhost:5000/historicos');
         if (response.ok) {
           const data = await response.json();
-          setMedications(data);  // Atualiza o estado com os dados reais
+          setMedications(data);  
         } else {
           setError('Falha ao carregar os dados.');
         }
@@ -34,7 +34,7 @@ const MedicationHistory = () => {
     fetchData();
   }, []);  // Executa apenas uma vez quando o componente for montado
 
-  // Filtros e ordenação
+  
   const filteredMedications = medications.filter(med => {
     const matchesSearch = 
       med.medicamento?.toLowerCase().includes(searchTerm.toLowerCase()) ||
