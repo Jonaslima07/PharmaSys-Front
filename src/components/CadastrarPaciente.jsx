@@ -3,19 +3,8 @@ import { Button, Modal, Form, Alert } from "react-bootstrap";
 import { useNavigate, useParams } from "react-router-dom";
 import PesquisaPaciente from "./PesquisaPaciente";
 import { ToastContainer, toast } from 'react-toastify';
-
 import {
-  Edit2,
-  Trash2,
-  Eye,
-  User,
-  Pill,
-  Hash,
-  CreditCard,
-  FileText,
-  Phone,
-  MapPin,
-} from "lucide-react";
+  Edit2,Trash2,User,CreditCard,FileText,Phone,MapPin, } from "lucide-react"; //Pill,Hash,Eye
 
 const CadastrarPaciente = () => {
   const [pacientes, setPacientes] = useState([]);
@@ -150,8 +139,6 @@ const CadastrarPaciente = () => {
       nome: !formData.nome,
       numeroCartaoSUS: !/^\d{15}$/.test(formData.numeroCartaoSUS),
       identidade: !/^\d{10}$/.test(formData.identidade),
-      medicamento: !formData.medicamento,
-      quantidade: !/^\d{1,13}$/.test(formData.quantidade), // Verificando quantidade de 1 a 13 dígitos
       cpf: !/^\d{11}$/.test(formData.cpf),
       telefone: !/^\d{10,11}$/.test(formData.telefone),
       endereco: !formData.endereco,
@@ -177,8 +164,6 @@ const CadastrarPaciente = () => {
       nome: "",
       numeroCartaoSUS: "",
       identidade: "",
-      medicamento: "",
-      quantidade: 0,
       cpf: "",
       telefone: "",
       endereco: "",
@@ -189,8 +174,6 @@ const CadastrarPaciente = () => {
       nome: false,
       numeroCartaoSUS: false,
       identidade: false,
-      medicamento: false,
-      quantidade: false,
       cpf: false,
       telefone: false,
       endereco: false,
@@ -207,8 +190,6 @@ const CadastrarPaciente = () => {
         nome: "",
         numeroCartaoSUS: "",
         identidade: "",
-        medicamento: "",
-        quantidade: 0,
         cpf: "",
         telefone: "",
         endereco: "",
@@ -263,7 +244,7 @@ const CadastrarPaciente = () => {
         style={{
           ...styles.patientCard,
           ...(isHovered ? styles.patientCardHover : {}),
-          width: "380px", // Aumentando a largura do card
+          width: "570px", // Antes era 380
         }}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
@@ -286,24 +267,6 @@ const CadastrarPaciente = () => {
           <div style={styles.infoGrid}>
             {/* Coluna 1 */}
             <div>
-              <div style={styles.infoItem}>
-                <Pill style={styles.icon} size={16} />
-                <div style={styles.infoContent}>
-                  <div style={styles.label}>Medicamento:</div>
-                  <div style={styles.value}>{patient.medicamento}</div>
-                </div>
-              </div>
-
-              <div style={styles.infoItem}>
-                <Hash style={styles.icon} size={16} />
-                <div style={styles.infoContent}>
-                  <div style={styles.label}>Quantidade:</div>
-                  <div style={{ ...styles.value, ...styles.quantidade }}>
-                    {patient.quantidade}
-                  </div>
-                </div>
-              </div>
-
               <div style={styles.infoItem}>
                 <CreditCard style={styles.icon} size={16} />
                 <div style={styles.infoContent}>
@@ -342,8 +305,8 @@ const CadastrarPaciente = () => {
               </div>
 
               <div style={styles.infoItem}>
-                <MapPin style={styles.icon} size={16} />
-                <div style={styles.infoContent}>
+                <MapPin style={styles.icontext} size={16} />
+                <div style={styles.infoContent2}>
                   <div style={styles.label}>Endereço:</div>
                   <div style={{ ...styles.value, ...styles.addressValue }}>
                     {patient.endereco}
@@ -588,45 +551,6 @@ const CadastrarPaciente = () => {
                 </Form.Control.Feedback>
               )}
             </Form.Group>
-
-            <Form.Group className="mb-3" controlId="medicamento">
-              <Form.Label style={{ color: "#000000" }}>Medicamento</Form.Label>
-              <Form.Control
-                type="text"
-                placeholder="Medicamento"
-                value={formData.medicamento}
-                onChange={(e) =>
-                  handleInputChange("medicamento", e.target.value)
-                }
-                isInvalid={formErrors.medicamento}
-              />
-            </Form.Group>
-
-            <Form.Group className="mb-3" controlId="quantidade">
-              <Form.Label style={{ color: "#000000" }}>Quantidade</Form.Label>
-              <Form.Control
-                type="number"
-                placeholder="Quantidade"
-                value={formData.quantidade}
-                onChange={(e) =>
-                  handleInputChange("quantidade", e.target.value)
-                }
-                isInvalid={formErrors.quantidade}
-                maxLength={13} // Limitar a quantidade a 13 dígitos
-              />
-              {formErrors.quantidade && (
-                <Form.Control.Feedback
-                  type="invalid"
-                  style={{
-                    marginTop: "-16px",
-                    fontSize: "14px",
-                    color: "#dc3545",
-                  }}
-                >
-                  A quantidade deve ser um número com no máximo 13 dígitos.
-                </Form.Control.Feedback>
-              )}
-            </Form.Group>
           </Form>
         </Modal.Body>
         <Modal.Footer style={styles.modalFooter}>
@@ -714,7 +638,7 @@ const styles = {
   },
   patientsGrid: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
+    gridTemplateColumns: "repeat(auto-fill, minmax(450px, 1fr))",
     gap: "16px",
     marginTop: "20px",
   },
@@ -783,9 +707,21 @@ const styles = {
     flex: 1,
     minWidth: 0,
   },
+   infoContent2: {
+    flex: 1,
+    minWidth: 0,
+    position: 'relative',
+    left: '-270px'
+  },
   icon: {
     color: "#4b5563",
     marginTop: "2px",
+  },
+  icontext: {
+    color: "#4b5563",
+    marginTop: "2px",
+    position:"relative",
+    left:'-270px'
   },
   label: {
     fontSize: "0.875rem",

@@ -16,7 +16,6 @@ const Dispensacaocomp = () => {
   const [pacientes, setPacientes] = useState([]);
   const [noPatients, setNoPatients] = useState(false);
 
-  // Função para pegar o nome do usuário logado
   const getUserLogged = () => {
     const userData = JSON.parse(localStorage.getItem("userData"));
     return userData ? userData.name : "Desconhecido";
@@ -91,13 +90,24 @@ const Dispensacaocomp = () => {
     setShowModal(true);
   };
 
+  // Função para encontrar o paciente baseado no CPF ou Cartão SUS
   const handlePacienteChange = (e) => {
-    const selectedPaciente = pacientes.find(p => p.nome === e.target.value);
-    setDispensadoPor(selectedPaciente?.nome || "");
-    setCartaoSus(selectedPaciente?.numeroCartaoSUS || "");
+    const searchTerm = e.target.value.trim();
+    setCartaoSus(searchTerm);
+
+    // Encontrar paciente pelo CPF ou Cartão SUS
+    const selectedPaciente = pacientes.find(
+      (p) => p.cpf === searchTerm || p.numeroCartaoSUS === searchTerm
+    );
+
+    if (selectedPaciente) {
+      setDispensadoPor(selectedPaciente.nome);
+    } else {
+      setDispensadoPor(""); // Se não encontrar, limpa o nome
+    }
   };
 
-      const confirmarDispensacao = async () => {
+  const confirmarDispensacao = async () => {
     if (!selectedMed) return;
 
     if (!dispensadoPor.trim()) {
@@ -118,7 +128,7 @@ const Dispensacaocomp = () => {
     const novaQuantidade = selectedMed.quantity - quantidade;
 
     try {
-      // 1. Atualiza o lote no servidor
+      // Atualiza o lote no servidor
       const response = await fetch(`http://localhost:5000/lotes/${selectedMed.id}`, {
         method: "PUT",
         headers: {
@@ -131,7 +141,7 @@ const Dispensacaocomp = () => {
       });
 
       if (response.ok) {
-        // 2. Cria o registro de histórico
+        // Cria o registro de histórico
         const novoRegistro = {
           id: Date.now(),
           medicamento: selectedMed.medicationName,
@@ -142,10 +152,11 @@ const Dispensacaocomp = () => {
           data: new Date().toISOString(),
           medicamentoId: selectedMed.id,
           gramas: selectedMed.grams,
-          dispensadoPor: getUserLogged()  // Pega o nome do usuário logado
+          dispensadoPor: getUserLogged(),  // Pega o nome do usuário logado
+          codigo: `DISP-${Date.now()}` // Código único para o registro
         };
 
-        // 3. Tenta salvar no histórico e usa fallback local se falhar
+        // Tenta salvar no histórico e usa fallback local se falhar
         try {
           const historicoResponse = await fetch('http://localhost:5000/historicos', {
             method: "POST",
@@ -164,7 +175,7 @@ const Dispensacaocomp = () => {
           setHistorico(prev => [...prev, novoRegistro]);
         }
 
-        // 4. Atualiza o estado diretamente, removendo o medicamento da lista ou atualizando a quantidade
+        // Atualiza o estado diretamente
         setMedicamentos(prev => 
           prev.map(item => 
             item.id === selectedMed.id
@@ -173,7 +184,14 @@ const Dispensacaocomp = () => {
           )
         );
 
-        setSuccessMsg(`${quantidade} unidade(s) de ${selectedMed.medicationName} dispensada(s) para ${dispensadoPor}.`);
+        // Exibe o toast com a mensagem de sucesso diretamente
+        const userName = getUserLogged(); // Obtém o nome do usuário logado
+        const successMessage = `${quantidade} unidade(s) de ${selectedMed.medicationName} dispensada(s) para ${dispensadoPor} por ${userName}.`;
+
+        toast.success(successMessage, {
+          autoClose: 10000,  // Define o tempo para o toast fechar (10 segundos)
+        });
+
         setShowModal(false);
         setDispensadoPor("");
         setCartaoSus("");
@@ -209,7 +227,6 @@ const Dispensacaocomp = () => {
     <div style={styles.container}>
       <h1 style={styles.title}>Dispensação de Medicamentos</h1>
 
-      
       {successMsg && (
         <div style={styles.successMessage}>
           <h4>Sucesso</h4>
@@ -243,7 +260,7 @@ const Dispensacaocomp = () => {
                 <p><strong>Fabricante:</strong> {med.manufacturer}</p>
                 <p><strong>Validade:</strong> {med.expirationDate}</p>
                 <p><strong>Estoque:</strong> {med.quantity} unidade(s)</p>
-                <p><strong>Gramas:</strong> {med.grams || 'N/A'}</p> {/* Exibindo gramas */}
+                <p><strong>Gramas:</strong> {med.grams || 'N/A'}</p>
               </div>
               
               <div style={styles.medFooter}>
@@ -264,9 +281,7 @@ const Dispensacaocomp = () => {
       
       <Modal show={showModal} onHide={() => setShowModal(false)}>
         <Modal.Header closeButton style={styles.modalHeader}>
-          <Modal.Title style={styles.modaltitle}>Dispensar Medicamento
-            <img src="images/pill.png" alt="Logo" style={styles.logo} />
-          </Modal.Title>
+          <Modal.Title style={styles.modaltitle}>Dispensar Medicamento</Modal.Title>
         </Modal.Header>
         <Modal.Body style={styles.modalBody}>
           {selectedMed && (
@@ -290,29 +305,23 @@ const Dispensacaocomp = () => {
                 />
               </Form.Group>
 
-              <Form.Group controlId="paciente" style={styles.formGroup}>
-                <Form.Label style={styles.formLabel}>Paciente</Form.Label>
-                <Form.Control
-                  as="select"
-                  value={dispensadoPor}
-                  onChange={handlePacienteChange}
-                  style={styles.formControl}
-                  required
-                >
-                  <option value="">Selecione um paciente</option>
-                  {pacientes.map(paciente => (
-                    <option key={paciente.id} value={paciente.nome}>
-                      {paciente.nome}
-                    </option>
-                  ))}
-                </Form.Control>
-              </Form.Group>
-
               <Form.Group controlId="cartaoSus" style={styles.formGroup}>
-                <Form.Label style={styles.formLabel}>Cartão do SUS</Form.Label>
+                <Form.Label style={styles.formLabel}>CPF ou Cartão do SUS</Form.Label>
                 <Form.Control
                   type="text"
                   value={cartaoSus}
+                  onChange={handlePacienteChange}
+                  placeholder="Digite o CPF ou Cartão do SUS"
+                  style={styles.formControl}
+                  required
+                />
+              </Form.Group>
+
+              <Form.Group controlId="paciente" style={styles.formGroup}>
+                <Form.Label style={styles.formLabel}>Paciente</Form.Label>
+                <Form.Control
+                  type="text"
+                  value={dispensadoPor}
                   readOnly
                   style={styles.formControl}
                 />
@@ -336,6 +345,7 @@ const Dispensacaocomp = () => {
 };
 
 export default Dispensacaocomp;
+
 
 
 const styles = {

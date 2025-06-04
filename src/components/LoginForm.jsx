@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import './logincss.css';
-import { GoogleLogin } from '@react-oauth/google'; // Importar GoogleLogin
+import { GoogleLogin } from '@react-oauth/google'; 
 
 const LoginForm = () => {
   const [email, setEmail] = useState('');
@@ -107,7 +107,7 @@ const LoginForm = () => {
           role: data.user.role,
           token: data.token
         }));
-        navigate('/cadastrarlotes'); // Redirecionando após login com sucesso
+        navigate('/cadastrarlotes'); 
       }
     } catch (error) {
       console.error('Erro no login com Google:', error);

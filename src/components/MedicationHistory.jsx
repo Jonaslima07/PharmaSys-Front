@@ -87,6 +87,11 @@ const MedicationHistory = () => {
     return date.toLocaleDateString('pt-BR');
   };
 
+  const formatTime = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleTimeString('pt-BR'); // Exibe a hora no formato de 24h
+  };
+
   if (isLoading) {
     return <div>Carregando...</div>;
   }
@@ -162,7 +167,8 @@ const MedicationHistory = () => {
             <p style={styles.medicationInfo}><strong>Quantidade dispensada:</strong> {med.quantidade}</p>
             <p style={styles.medicationInfo}><strong>Gramas:</strong> {med.gramas || 'N/A'}</p> {/* Exibindo as gramas */}
             <div style={styles.medicationFooter}>
-              <span>Dispensado em: {formatDate(med.data)}</span>
+              <span>Dispensado em: {formatDate(med.data)} {formatTime(med.data)}</span>
+              <span>Código: {med.codigo}</span> {/* Exibe o código único */}
               <span>Por: {med.dispensadoPor}</span>
             </div>
           </div>
