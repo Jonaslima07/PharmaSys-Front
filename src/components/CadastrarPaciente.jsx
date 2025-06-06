@@ -758,10 +758,8 @@ const styles = {
   addressValue: {
     lineHeight: "1.5",
     display: "-webkit-box",
-    WebkitLineClamp: 2, // Limita a 2 linhas para endereço
+    WebkitLineClamp: 5, // Limita a 2 linhas para endereço
     WebkitBoxOrient: "vertical",
-    overflow: "hidden", //remover aqui caso queira tirar os 3 pontinhos
-    textOverflow: "ellipsis",  //remover aqui caso queira tirar os 3 pontinhos
     whiteSpace: "normal", // Permite quebra de linha para endereço
   },
 
