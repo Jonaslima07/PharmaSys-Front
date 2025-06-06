@@ -104,7 +104,8 @@ const BatchList = () => {
       (batch.manufacturer || '').toLowerCase().includes(search) ||
       (batch.medicationName || '').toLowerCase().includes(search) ||
       (batch.therapeuticClass || '').toLowerCase().includes(search) ||  // Filtrando pela categoria
-      (batch.pharmaceuticalForm || '').toLowerCase().includes(search)   // Filtrando pela forma farmacêutica
+      (batch.pharmaceuticalForm || '').toLowerCase().includes(search) ||  // Filtrando pela forma farmacêutica
+      (batch.lotNumber || '').toLowerCase().includes(search)  // Adicionando filtro para o Lote de Fabricante
     );
   });
 
@@ -179,11 +180,11 @@ const BatchList = () => {
 
   return (
     <div className="batch-list-container">
-      <h1>Controle de Lotes</h1>
-      <p className="subtitle">Gerencie os lotes de medicamentos do seu estoque</p>
+      <h1>Controle de Cadastro de Medicamentos</h1>
+      <p className="subtitle">faça o seu cadastro de medicamentos</p>
 
       <div className="batch-content">
-        <h2>Lotes de Medicamentos</h2>
+        <h2>Medicamentos Cadastrados</h2>
         
         <div className="batch-actions">
           <input
@@ -220,12 +221,13 @@ const BatchList = () => {
               <thead>
                 <tr>
                   <th>Imagem</th>
-                  <th>Número do Lote</th>
+                  <th>Lote de Farmácia</th>
+                  <th>Lote de Fabricante</th> {/* Nova coluna para o Lote de Fabricante */}
                   <th>Medicamento</th>
                   <th>Fabricante</th>
                   <th>Validade</th>
                   <th>Quantidade</th>
-                  <th>Gramas</th> {/* Nova coluna para Gramas */}
+                  <th>Gramas</th>
                   <th>Classe Terapêutica</th> {/* Nova coluna para Categoria */}
                   <th>Forma Farmacêutica</th> {/* Nova coluna para Forma Farmacêutica */}
                   <th>Status</th>
@@ -256,6 +258,7 @@ const BatchList = () => {
                         )}
                       </td>
                       <td>{batch.number || '-'}</td>
+                      <td>{batch.lotNumber || '-'}</td> {/* Exibe o Lote de Fabricante */}
                       <td>{batch.medicationName || '-'}</td>
                       <td>{batch.manufacturer || '-'}</td>
                       <td>{formatDate(batch.expirationDate)}</td>

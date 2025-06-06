@@ -79,7 +79,7 @@ const HeaderLoggedIn = ({ onLogout }) => {
               onMouseLeave={handleMouseLeave}
               onClick={handleMouseClick}
             >
-              Cadastrar Lotes
+              Cadastrar Medicamentos
             </Nav.Link>
             <Nav.Link
               as={Link}

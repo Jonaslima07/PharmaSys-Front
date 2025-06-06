@@ -258,7 +258,7 @@ const Dispensacaocomp = () => {
               /> 
               
                <div style={styles.medInfo}>
-                <p><strong>Lote:</strong> {med.number}</p>
+                <p><strong>Lote de Farmacia:</strong> {med.number}</p>
                 <p><strong>Fabricante:</strong> {med.manufacturer}</p>
                 <p><strong>Validade:</strong> {med.expirationDate}</p>
                 <p><strong>Estoque:</strong> {med.quantity} unidade(s)</p>
@@ -291,7 +291,7 @@ const Dispensacaocomp = () => {
           {selectedMed && (
             <>
               <p><strong>Medicamento:</strong> {selectedMed.medicationName}</p>
-              <p><strong>Lote:</strong> {selectedMed.number}</p>
+              <p><strong>Lote de Farmacia:</strong> {selectedMed.number}</p>
               <p><strong>Estoque disponível:</strong> {selectedMed.quantity} unidades</p>
 
               <Form.Group controlId="quantidade" style={styles.formGroup}>
