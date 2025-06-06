@@ -23,12 +23,13 @@ const Dispensacaocomp = () => {
 
   const getImageSource = (imageData) => {
     if (!imageData) return "/default-image.png";
-    if (typeof imageData === 'string' && imageData.startsWith('data:image')) return imageData;
-    if (imageData.type === 'Buffer' && Array.isArray(imageData.data)) {
-      const base64String = Buffer.from(imageData.data).toString('base64');
+    if (typeof imageData === "string" && imageData.startsWith("data:image"))
+      return imageData;
+    if (imageData.type === "Buffer" && Array.isArray(imageData.data)) {
+      const base64String = Buffer.from(imageData.data).toString("base64");
       return `data:image/jpeg;base64,${base64String}`;
     }
-    if (typeof imageData === 'string' && imageData.length > 1000) {
+    if (typeof imageData === "string" && imageData.length > 1000) {
       return `data:image/jpeg;base64,${imageData}`;
     }
     return imageData || "/default-image.png";
@@ -42,10 +43,10 @@ const Dispensacaocomp = () => {
         if (response.ok) {
           const data = await response.json();
           const medicamentosFormatados = data
-            .filter(med => med.quantity > 0)
-            .map(med => ({
+            .filter((med) => med.quantity > 0)
+            .map((med) => ({
               ...med,
-              imageUrl: getImageSource(med.medicationImage || med.imageUrl)
+              imageUrl: getImageSource(med.medicationImage || med.imageUrl),
             }));
           setMedicamentos(medicamentosFormatados);
         } else {
@@ -84,7 +85,7 @@ const Dispensacaocomp = () => {
       toast.error("Nenhum paciente cadastrado no sistema.");
       return;
     }
-    
+
     setSelectedMed(med);
     setQuantidade(1);
     setShowModal(true);
@@ -121,7 +122,9 @@ const Dispensacaocomp = () => {
     }
 
     if (quantidade > selectedMed.quantity) {
-      toast.error(`Quantidade indisponível. Estoque atual: ${selectedMed.quantity}`);
+      toast.error(
+        `Quantidade indisponível. Estoque atual: ${selectedMed.quantity}`
+      );
       return;
     }
 
@@ -129,16 +132,19 @@ const Dispensacaocomp = () => {
 
     try {
       // Atualiza o lote no servidor
-      const response = await fetch(`http://localhost:5000/lotes/${selectedMed.id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          ...selectedMed,
-          quantity: novaQuantidade,
-        }),
-      });
+      const response = await fetch(
+        `http://localhost:5000/lotes/${selectedMed.id}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            ...selectedMed,
+            quantity: novaQuantidade,
+          }),
+        }
+      );
 
       if (response.ok) {
         // Cria o registro de histórico
@@ -154,32 +160,38 @@ const Dispensacaocomp = () => {
           gramas: selectedMed.grams,
           therapeuticClass: selectedMed.therapeuticClass, // Adicionando Categoria/Classe Terapêutica
           pharmaceuticalForm: selectedMed.pharmaceuticalForm, // Adicionando Forma Farmacêutica
-          dispensadoPor: getUserLogged(),  // Pega o nome do usuário logado
-          codigo: `DISP-${Date.now()}` // Código único para o registro
+          dispensadoPor: getUserLogged(), // Pega o nome do usuário logado
+          codigo: `DISP-${Date.now()}`, // Código único para o registro
         };
 
         // Tenta salvar no histórico e usa fallback local se falhar
         try {
-          const historicoResponse = await fetch('http://localhost:5000/historicos', {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify(novoRegistro)
-          });
+          const historicoResponse = await fetch(
+            "http://localhost:5000/historicos",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify(novoRegistro),
+            }
+          );
 
           if (!historicoResponse.ok) {
             console.warn("Falha ao salvar no histórico, usando fallback local");
-            setHistorico(prev => [...prev, novoRegistro]);
+            setHistorico((prev) => [...prev, novoRegistro]);
           }
         } catch (historicoError) {
-          console.warn("Erro ao acessar /historico, usando fallback:", historicoError);
-          setHistorico(prev => [...prev, novoRegistro]);
+          console.warn(
+            "Erro ao acessar /historico, usando fallback:",
+            historicoError
+          );
+          setHistorico((prev) => [...prev, novoRegistro]);
         }
 
         // Atualiza o estado diretamente
-        setMedicamentos(prev => 
-          prev.map(item => 
+        setMedicamentos((prev) =>
+          prev.map((item) =>
             item.id === selectedMed.id
               ? { ...item, quantity: novaQuantidade }
               : item
@@ -191,7 +203,7 @@ const Dispensacaocomp = () => {
         const successMessage = `${quantidade} unidade(s) de ${selectedMed.medicationName} dispensada(s) para ${dispensadoPor} por ${userName}.`;
 
         toast.success(successMessage, {
-          autoClose: 10000,  // Define o tempo para o toast fechar (10 segundos)
+          autoClose: 10000, // Define o tempo para o toast fechar (10 segundos)
         });
 
         setShowModal(false);
@@ -208,15 +220,15 @@ const Dispensacaocomp = () => {
 
   const ImagemMedicamento = ({ src, alt }) => {
     const [imageSrc, setImageSrc] = useState(src);
-    
+
     if (quantidade <= 0) {
       return null;
     }
 
     return (
       <div style={styles.medImageContainer}>
-        <img 
-          src={imageSrc} 
+        <img
+          src={imageSrc}
           alt={alt}
           style={styles.medImage}
           onError={() => setImageSrc("/default-image.png")}
@@ -250,23 +262,41 @@ const Dispensacaocomp = () => {
           {medicamentos.map((med) => (
             <div key={med.id} style={styles.medCard}>
               <h3 style={styles.medTitle}>{med.medicationName}</h3>
-              
-              <ImagemMedicamento 
+
+              <ImagemMedicamento
                 src={med.imageUrl}
                 alt={med.medicationName}
                 quantidade={med.quantity}
-              /> 
-              
-               <div style={styles.medInfo}>
-                <p><strong>Lote de Farmacia:</strong> {med.number}</p>
-                <p><strong>Fabricante:</strong> {med.manufacturer}</p>
-                <p><strong>Validade:</strong> {med.expirationDate}</p>
-                <p><strong>Estoque:</strong> {med.quantity} unidade(s)</p>
-                <p><strong>Gramas:</strong> {med.grams || 'N/A'}</p>
-                <p><strong>Classe Terapêutica:</strong> {med.therapeuticClass || 'Não informada'}</p> {/* Adicionando Categoria */}
-                <p><strong>Forma Farmacêutica:</strong> {med.pharmaceuticalForm || 'Não informada'}</p> {/* Adicionando Forma Farmacêutica */}
+              />
+
+              <div style={styles.medInfo}>
+                <p>
+                  <strong>Lote de Farmacia:</strong> {med.number}
+                </p>
+                <p>
+                  <strong>Fabricante:</strong> {med.manufacturer}
+                </p>
+                <p>
+                  <strong>Validade:</strong> {med.expirationDate}
+                </p>
+                <p>
+                  <strong>Estoque:</strong> {med.quantity} unidade(s)
+                </p>
+                <p>
+                  <strong>Gramas:</strong> {med.grams || "N/A"}
+                </p>
+                <p>
+                  <strong>Classe Terapêutica:</strong>{" "}
+                  {med.therapeuticClass || "Não informada"}
+                </p>{" "}
+                {/* Adicionando Categoria */}
+                <p>
+                  <strong>Forma Farmacêutica:</strong>{" "}
+                  {med.pharmaceuticalForm || "Não informada"}
+                </p>{" "}
+                {/* Adicionando Forma Farmacêutica */}
               </div>
-              
+
               <div style={styles.medFooter}>
                 <Button
                   variant="primary"
@@ -282,20 +312,34 @@ const Dispensacaocomp = () => {
         </div>
       )}
       <hr style={styles.hr} />
-      
+
       <Modal show={showModal} onHide={() => setShowModal(false)}>
         <Modal.Header closeButton style={styles.modalHeader}>
-          <Modal.Title style={styles.modaltitle}>Dispensar Medicamento</Modal.Title>
+          <div style={styles.modalTitleContainer}>
+            <img src="/images/pill.png" alt="Pílula" style={styles.pillIcon} />
+          </div>
+          <Modal.Title style={styles.modaltitle}>
+            Dispensar Medicamento
+          </Modal.Title>
         </Modal.Header>
         <Modal.Body style={styles.modalBody}>
           {selectedMed && (
             <>
-              <p><strong>Medicamento:</strong> {selectedMed.medicationName}</p>
-              <p><strong>Lote de Farmacia:</strong> {selectedMed.number}</p>
-              <p><strong>Estoque disponível:</strong> {selectedMed.quantity} unidades</p>
+              <p>
+                <strong>Medicamento:</strong> {selectedMed.medicationName}
+              </p>
+              <p>
+                <strong>Lote de Farmacia:</strong> {selectedMed.number}
+              </p>
+              <p>
+                <strong>Estoque disponível:</strong> {selectedMed.quantity}{" "}
+                unidades
+              </p>
 
               <Form.Group controlId="quantidade" style={styles.formGroup}>
-                <Form.Label style={styles.formLabel}>Quantidade a dispensar</Form.Label>
+                <Form.Label style={styles.formLabel}>
+                  Quantidade a dispensar
+                </Form.Label>
                 <Form.Control
                   type="number"
                   value={quantidade}
@@ -310,7 +354,9 @@ const Dispensacaocomp = () => {
               </Form.Group>
 
               <Form.Group controlId="cartaoSus" style={styles.formGroup}>
-                <Form.Label style={styles.formLabel}>CPF ou Cartão do SUS</Form.Label>
+                <Form.Label style={styles.formLabel}>
+                  CPF ou Cartão do SUS
+                </Form.Label>
                 <Form.Control
                   type="text"
                   value={cartaoSus}
@@ -343,14 +389,16 @@ const Dispensacaocomp = () => {
         </Modal.Footer>
       </Modal>
 
-      <ToastContainer position="top-right" autoClose={5000} hideProgressBar={false} />
+      <ToastContainer
+        position="top-right"
+        autoClose={5000}
+        hideProgressBar={false}
+      />
     </div>
   );
 };
 
 export default Dispensacaocomp;
-
-
 
 const styles = {
   body: {
@@ -358,7 +406,13 @@ const styles = {
     backgroundColor: "#f4f5f7",
     color: "#333",
     margin: 0,
-    padding: 0
+    padding: 0,
+  },
+
+   pillIcon: {
+    width: '30px',  // Tamanho da imagem da pílula
+    marginRight: '10px',  // Espaçamento entre a imagem e o título
+    alignSelf: 'center',
   },
   container: {
     maxWidth: "1200px",
@@ -366,20 +420,20 @@ const styles = {
     backgroundColor: "#fff",
     borderRadius: "10px",
     boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
-    padding: "20px"
+    padding: "20px",
   },
   title: {
     textAlign: "center",
     fontSize: "1.8rem",
     color: "#007bff",
     fontWeight: "bold",
-    marginBottom: "30px"
+    marginBottom: "30px",
   },
   medicamentosList: {
     display: "flex",
     flexWrap: "wrap",
     gap: "20px",
-    justifyContent: "space-between"
+    justifyContent: "space-between",
   },
   medCard: {
     backgroundColor: "#fff",
@@ -389,90 +443,87 @@ const styles = {
     width: "30%",
     boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
     display: "flex",
-    flexDirection: "column"
+    flexDirection: "column",
   },
   medTitle: {
     fontSize: "1.4rem",
     marginBottom: "15px",
     color: "#333",
-    textAlign: "center"
+    textAlign: "center",
   },
   medImageContainer: {
     width: "100%",
     height: "auto",
-    marginBottom: "15px"
+    marginBottom: "15px",
   },
   medImage: {
     maxWidth: "100%",
     maxHeight: "100%",
-    objectFit: "contain"
+    objectFit: "contain",
   },
   medInfo: {
     flexGrow: 1,
-    marginBottom: "15px"
+    marginBottom: "15px",
   },
   medFooter: {
     textAlign: "center",
-    marginTop: "auto"
+    marginTop: "auto",
   },
   dispensarBtn: {
     backgroundColor: "#007bff",
     borderColor: "#007bff",
     padding: "8px 20px",
     fontSize: "0.95rem",
-    width: "100%"
+    width: "100%",
   },
   successMessage: {
     backgroundColor: "#d4edda",
     color: "#155724",
     padding: "15px",
     borderRadius: "8px",
-    marginTop: "20px"
+    marginTop: "20px",
   },
   hr: {
     margin: "25px 0",
     border: 0,
-    borderTop: "1px solid #eee"
+    borderTop: "1px solid #eee",
   },
   modalHeader: {
     backgroundColor: "#007bff",
     color: "white",
-    fontWeight: "bold"
+    fontWeight: "bold",
   },
   modalBody: {
     backgroundColor: "#f8f9fa",
-    padding: "20px"
+    padding: "20px",
   },
   modalFooter: {
     backgroundColor: "#f8f9fa",
     borderTop: "1px solid #ddd",
-    padding: "15px 20px"
+    padding: "15px 20px",
   },
   formGroup: {
-    marginBottom: "15px"
+    marginBottom: "15px",
   },
   formLabel: {
     fontWeight: 600,
     marginBottom: "5px",
-    display: "block"
+    display: "block",
   },
   formControl: {
     borderRadius: "4px",
     padding: "8px 12px",
-    width: "100%"
+    width: "100%",
   },
   logo: {
-    width: '25px',
-    position:'relative',
-    left: '-290px',
-    top:'-2px'
+    width: "25px",
+    position: "relative",
+    left: "-290px",
+    top: "-2px",
   },
   modaltitle: {
-    position:'relative',
-    left: '20px',
-    height: '40px'
-    
-
+    position: "relative",
+    left: "20px",
+    height: "40px",
   },
-  
 };
