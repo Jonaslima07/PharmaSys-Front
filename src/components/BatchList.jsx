@@ -102,7 +102,9 @@ const BatchList = () => {
     return (
       (batch.number || '').toLowerCase().includes(search) ||
       (batch.manufacturer || '').toLowerCase().includes(search) ||
-      (batch.medicationName || '').toLowerCase().includes(search)
+      (batch.medicationName || '').toLowerCase().includes(search) ||
+      (batch.therapeuticClass || '').toLowerCase().includes(search) ||  // Filtrando pela categoria
+      (batch.pharmaceuticalForm || '').toLowerCase().includes(search)   // Filtrando pela forma farmacêutica
     );
   });
 
@@ -224,6 +226,8 @@ const BatchList = () => {
                   <th>Validade</th>
                   <th>Quantidade</th>
                   <th>Gramas</th> {/* Nova coluna para Gramas */}
+                  <th>Classe Terapêutica</th> {/* Nova coluna para Categoria */}
+                  <th>Forma Farmacêutica</th> {/* Nova coluna para Forma Farmacêutica */}
                   <th>Status</th>
                   <th>Data de Fabricação</th>
                   <th>Ações</th>
@@ -256,7 +260,9 @@ const BatchList = () => {
                       <td>{batch.manufacturer || '-'}</td>
                       <td>{formatDate(batch.expirationDate)}</td>
                       <td>{batch.quantity || '0'}</td>
-                      <td>{batch.grams || '0'} gramas</td> {/* Exibe os gramas */}
+                      <td>{batch.grams || '0'} gramas</td>
+                      <td>{batch.therapeuticClass || '-'}</td> {/* Exibe a categoria */}
+                      <td>{batch.pharmaceuticalForm || '-'}</td> {/* Exibe a forma farmacêutica */}
                       <td>
                         <span className="status-badge" style={getStatusStyle(status)}>
                           {status}

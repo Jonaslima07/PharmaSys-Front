@@ -152,6 +152,8 @@ const Dispensacaocomp = () => {
           data: new Date().toISOString(),
           medicamentoId: selectedMed.id,
           gramas: selectedMed.grams,
+          therapeuticClass: selectedMed.therapeuticClass, // Adicionando Categoria/Classe Terapêutica
+          pharmaceuticalForm: selectedMed.pharmaceuticalForm, // Adicionando Forma Farmacêutica
           dispensadoPor: getUserLogged(),  // Pega o nome do usuário logado
           codigo: `DISP-${Date.now()}` // Código único para o registro
         };
@@ -255,12 +257,14 @@ const Dispensacaocomp = () => {
                 quantidade={med.quantity}
               /> 
               
-              <div style={styles.medInfo}>
+               <div style={styles.medInfo}>
                 <p><strong>Lote:</strong> {med.number}</p>
                 <p><strong>Fabricante:</strong> {med.manufacturer}</p>
                 <p><strong>Validade:</strong> {med.expirationDate}</p>
                 <p><strong>Estoque:</strong> {med.quantity} unidade(s)</p>
                 <p><strong>Gramas:</strong> {med.grams || 'N/A'}</p>
+                <p><strong>Classe Terapêutica:</strong> {med.therapeuticClass || 'Não informada'}</p> {/* Adicionando Categoria */}
+                <p><strong>Forma Farmacêutica:</strong> {med.pharmaceuticalForm || 'Não informada'}</p> {/* Adicionando Forma Farmacêutica */}
               </div>
               
               <div style={styles.medFooter}>

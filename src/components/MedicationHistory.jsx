@@ -165,7 +165,9 @@ const MedicationHistory = () => {
             <h3 style={styles.medicationName}>{med.medicamento}</h3>
             <p style={styles.medicationInfo}>Paciente: {med.paciente}</p>
             <p style={styles.medicationInfo}><strong>Quantidade dispensada:</strong> {med.quantidade}</p>
-            <p style={styles.medicationInfo}><strong>Gramas:</strong> {med.gramas || 'N/A'}</p> {/* Exibindo as gramas */}
+            <p style={styles.medicationInfo}><strong>Gramas:</strong> {med.gramas || 'N/A'}</p>
+            <p style={styles.medicationInfo}><strong>Classe Terapêutica:</strong> {med.therapeuticClass || 'Não informada'}</p> {/* Exibe Categoria */}
+            <p style={styles.medicationInfo}><strong>Forma Farmacêutica:</strong> {med.pharmaceuticalForm || 'Não informada'}</p> {/* Exibe Forma Farmacêutica */}
             <div style={styles.medicationFooter}>
               <span>Dispensado em: {formatDate(med.data)} {formatTime(med.data)}</span>
               <span>Código: {med.codigo}</span> {/* Exibe o código único */}
