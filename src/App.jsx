@@ -10,7 +10,7 @@ import NoPage from './views/NoPage.jsx';
 import CadastroDlotes from './views/CadastroDlotes.jsx';
 import MedHistorico from './views/MedHistorico.jsx'; 
 import Homelogar from './components/Homelogar.jsx';
-//import Dashboard from './views/DashBoard.jsx'; //  o componente Dashboard esta em desenvolvimento
+import LotesEntregues from './views/LotesEntregues.jsx'; //  o componente Dashboard esta em desenvolvimento
 import Profile from './views/Profile.jsx'; 
 
 function App() {
@@ -53,8 +53,8 @@ function App() {
           element: <MedHistorico />, 
         },
         {
-          //path: 'dashboard', // em desenvolvimento
-          //element: <DashBoard />,
+          path: 'lotes', // em desenvolvimento
+          element: <LotesEntregues />,
         },
         {
           path: 'profile', 
