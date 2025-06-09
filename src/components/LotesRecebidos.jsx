@@ -1,13 +1,16 @@
 import React, { useState, useEffect } from "react";
 import { toast } from "react-toastify";
 import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
-
-import { FaPlus } from "react-icons/fa";
-import { FaDownload } from "react-icons/fa";
-import { FaSearch } from "react-icons/fa";
+import {
+  FaPlus,
+  FaDownload,
+  FaSearch,
+  FaEdit,
+  FaTrashAlt,
+} from "react-icons/fa";
 import LoteForm from "./LoteForm";
 
+// Definições estáticas (formas, status, unidades)
 const formasFarmaceuticas = [
   "Comprimido",
   "Cápsula",
@@ -34,7 +37,7 @@ const classesTerapeuticas = [
   "Outros",
 ];
 
-const statusLote = ["Recebido", "Em Processamento", "Armazenado"];
+const statusLote = ["Vencido", "A vencer"];
 
 const unidadesMedida = ["mg", "ml", "unidade", "frasco", "caixa", "blister"];
 
@@ -49,19 +52,72 @@ const LotesRecebidos = () => {
   const [dialogAberto, setDialogAberto] = useState(false);
   const [loteEditando, setLoteEditando] = useState(null);
   const [formData, setFormData] = useState({});
+  const [loteId, setLoteId] = useState(null); // Adicionando loteId no estado
 
+  const calculateStatus = (dataValidade) => {
+    if (!dataValidade) return "A vencer";
+
+    const hoje = new Date();
+    const dataVal = new Date(dataValidade);
+
+    // Remove a parte de hora/minuto/segundo para comparar apenas datas
+    hoje.setHours(0, 0, 0, 0);
+    dataVal.setHours(0, 0, 0, 0);
+
+    return dataVal < hoje ? "Vencido" : "A vencer";
+  };
+
+  const getStatusStyle = (status) => {
+    return status === "Vencido"
+      ? {
+          backgroundColor: "#fee2e2",
+          color: "#b91c1c",
+          padding: "0.25rem 0.5rem",
+          borderRadius: "0.375rem",
+        }
+      : {
+          backgroundColor: "#dbeafe",
+          color: "#1e40af",
+          padding: "0.25rem 0.5rem",
+          borderRadius: "0.375rem",
+        };
+  };
+
+    const handleSaveLote = (novoLote) => {
+    // Calcula o status baseado na data de validade
+    const statusCalculado = calculateStatus(novoLote.dataValidade);
+    
+    const loteComStatus = {
+      ...novoLote,
+      statusLote: statusCalculado
+    };
+
+    if (loteEditando) {
+      setLotes((prevLotes) =>
+        prevLotes.map((lote) => (lote.id === loteComStatus.id ? loteComStatus : lote))
+      );
+    } else {
+      setLotes((prevLotes) => [...prevLotes, loteComStatus]);
+    }
+  };
+
+  // Modifique a inicialização do formData para incluir o status calculado
   const initializeFormData = () => {
+    const hoje = new Date();
+    const umMesAFrente = new Date();
+    umMesAFrente.setMonth(umMesAFrente.getMonth() + 1);
+
     setFormData({
       numeroLote: "",
       nomeMedicamento: "",
       dataFabricacao: new Date(),
-      dataValidade: new Date(),
+      dataValidade: umMesAFrente, // Data padrão 1 mês à frente
       quantidadeRecebida: 0,
       fornecedor: "",
       numeroNotaFiscal: "",
       formaFarmaceutica: "",
       classeTerapeutica: "",
-      statusLote: "Recebido",
+      statusLote: calculateStatus(umMesAFrente), // Status calculado
       observacoes: "",
       responsavelRecebimento: "",
       dataRecebimento: new Date(),
@@ -70,28 +126,61 @@ const LotesRecebidos = () => {
     });
   };
 
+  // Buscar os lotes quando o componente for montado
   useEffect(() => {
-    initializeFormData();
+    const fetchLotes = async () => {
+      try {
+        const response = await fetch("http://localhost:5000/lotesrecebidos");
+        if (!response.ok) {
+          throw new Error("Erro ao carregar os lotes.");
+        }
+        const data = await response.json();
+        setLotes(data); // Atualiza o estado com os dados dos lotes
+      } catch (error) {
+        console.error("Erro ao buscar lotes:", error);
+        toast({
+          title: "Erro ao carregar lotes",
+          description: error.message,
+          variant: "destructive",
+        });
+      }
+    };
+    fetchLotes();
   }, []);
 
+      // Filtra os lotes conforme os critérios de busca e filtros
   const lotesFiltrados = lotes.filter((lote) => {
-    const buscaLower = busca.toLowerCase();
-    const matchBusca =
-      lote.nomeMedicamento.toLowerCase().includes(buscaLower) ||
-      lote.numeroLote.toLowerCase().includes(buscaLower) ||
-      lote.numeroNotaFiscal.toLowerCase().includes(buscaLower);
+    try {
+      const buscaLower = busca.toLowerCase();
+      const statusLote = calculateStatus(lote.dataValidade);
+      
+      // Verifica busca
+      const matchBusca =
+        (lote.nomeMedicamento?.toLowerCase().includes(buscaLower)) ||
+        (lote.numeroLote?.toLowerCase().includes(buscaLower)) ||
+        (lote.numeroNotaFiscal?.toLowerCase().includes(buscaLower)) ||
+        false;
 
-    const matchFornecedor =
-      filtros.fornecedor === "todos" || lote.fornecedor === filtros.fornecedor;
-    const matchStatus =
-      filtros.status === "todos" || lote.statusLote === filtros.status;
-    const matchClasse =
-      filtros.classeTerapeutica === "todos" ||
-      lote.classeTerapeutica === filtros.classeTerapeutica;
+      // Verifica filtros
+      const matchFornecedor =
+        filtros.fornecedor === "todos" || 
+        (lote.fornecedor && lote.fornecedor === filtros.fornecedor);
 
-    return matchBusca && matchFornecedor && matchStatus && matchClasse;
+      const matchStatus =
+        filtros.status === "todos" || 
+        statusLote === filtros.status;
+
+      const matchClasse =
+        filtros.classeTerapeutica === "todos" || 
+        (lote.classeTerapeutica && lote.classeTerapeutica === filtros.classeTerapeutica);
+
+      return matchBusca && matchFornecedor && matchStatus && matchClasse;
+    } catch (error) {
+      console.error("Erro ao filtrar lote:", lote, error);
+      return false; // Exclui lotes com problemas da listagem
+    }
   });
-
+  // Validação dos campos do formulário
   const validarFormulario = () => {
     if (!formData.numeroLote || formData.numeroLote.length > 12) {
       toast({
@@ -102,7 +191,6 @@ const LotesRecebidos = () => {
       });
       return false;
     }
-
     if (!formData.nomeMedicamento) {
       toast({
         title: "Erro de Validação",
@@ -111,7 +199,6 @@ const LotesRecebidos = () => {
       });
       return false;
     }
-
     if (!formData.dataFabricacao || formData.dataFabricacao > new Date()) {
       toast({
         title: "Erro de Validação",
@@ -120,7 +207,6 @@ const LotesRecebidos = () => {
       });
       return false;
     }
-
     if (
       !formData.dataValidade ||
       formData.dataValidade <= formData.dataFabricacao
@@ -133,7 +219,6 @@ const LotesRecebidos = () => {
       });
       return false;
     }
-
     if (!formData.quantidadeRecebida || formData.quantidadeRecebida <= 0) {
       toast({
         title: "Erro de Validação",
@@ -142,7 +227,6 @@ const LotesRecebidos = () => {
       });
       return false;
     }
-
     if (!formData.fornecedor) {
       toast({
         title: "Erro de Validação",
@@ -151,7 +235,6 @@ const LotesRecebidos = () => {
       });
       return false;
     }
-
     if (!formData.numeroNotaFiscal) {
       toast({
         title: "Erro de Validação",
@@ -160,7 +243,6 @@ const LotesRecebidos = () => {
       });
       return false;
     }
-
     if (!formData.formaFarmaceutica) {
       toast({
         title: "Erro de Validação",
@@ -169,7 +251,6 @@ const LotesRecebidos = () => {
       });
       return false;
     }
-
     if (!formData.responsavelRecebimento) {
       toast({
         title: "Erro de Validação",
@@ -178,7 +259,6 @@ const LotesRecebidos = () => {
       });
       return false;
     }
-
     if (!formData.dataRecebimento || formData.dataRecebimento > new Date()) {
       toast({
         title: "Erro de Validação",
@@ -187,7 +267,6 @@ const LotesRecebidos = () => {
       });
       return false;
     }
-
     if (!formData.unidadeMedida) {
       toast({
         title: "Erro de Validação",
@@ -201,13 +280,17 @@ const LotesRecebidos = () => {
   };
 
   const salvarLote = () => {
-    if (!validarFormulario()) return;
+  if (!validarFormulario()) return;
 
-    const novoLote = {
-      id: loteEditando?.id || Date.now().toString(),
-      ...formData,
-    };
+  // Calcula o status baseado na data de validade
+  const statusCalculado = calculateStatus(formData.dataValidade);
 
+  const novoLote = {
+    id: loteEditando?.id || Date.now().toString(),
+    ...formData,
+    statusLote: statusCalculado // Usa o status calculado
+  };
+    // Restante da função permanece igual
     if (loteEditando) {
       setLotes(
         lotes.map((lote) => (lote.id === loteEditando.id ? novoLote : lote))
@@ -231,21 +314,49 @@ const LotesRecebidos = () => {
     initializeFormData();
   };
 
+  // Quando o usuário clica para editar um lote
   const editarLote = (lote) => {
     setLoteEditando(lote);
     setFormData(lote);
+    setLoteId(lote.id); // Definindo o loteId
     setDialogAberto(true);
   };
 
-  const excluirLote = (id) => {
-    setLotes(lotes.filter((lote) => lote.id !== id));
-    toast({
-      title: "Sucesso",
-      description: "Lote excluído com sucesso!",
-      className: "bg-green-100 text-green-800 border-green-300",
-    });
+  const [excluindo, setExcluindo] = useState(null); // Adicione este estado
+
+  const excluirLote = async (id, nomeMedicamento) => {
+    // Confirmação movida para dentro da função
+    if (
+      !window.confirm(
+        `Tem certeza que deseja excluir o lote "${nomeMedicamento}"?`
+      )
+    ) {
+      return; // Sai da função se o usuário cancelar
+    }
+
+    try {
+      setExcluindo(id); // Mostra loading
+
+      const response = await fetch(
+        `http://localhost:5000/lotesrecebidos/${id}`,
+        {
+          method: "DELETE",
+        }
+      );
+
+      if (!response.ok) throw new Error("Erro ao excluir lote");
+
+      setLotes(lotes.filter((lote) => lote.id !== id));
+      toast.success("Lote excluído com sucesso!");
+    } catch (error) {
+      toast.error("Falha ao excluir lote");
+      console.error("Erro:", error);
+    } finally {
+      setExcluindo(null); // Remove loading
+    }
   };
 
+  // Exportar lotes para Excel (formato CSV)
   const exportarExcel = () => {
     const csvContent = [
       [
@@ -325,7 +436,7 @@ const LotesRecebidos = () => {
                   Novo Lote
                 </button>
 
-                <button style={styles.buttonOutline} onClick={exportarExcel}>
+                <button style={styles.buttonexcell} onClick={exportarExcel}>
                   <FaDownload
                     style={{
                       width: "1rem",
@@ -385,7 +496,9 @@ const LotesRecebidos = () => {
                     setFiltros({ ...filtros, fornecedor: e.target.value })
                   }
                 >
-                  <option value="todos">Todos fornecedores</option>
+                  <option key="todos" value="todos">
+                    Todos fornecedores
+                  </option>
                   {Array.from(
                     new Set(lotes.map((lote) => lote.fornecedor))
                   ).map((fornecedor) => (
@@ -394,7 +507,6 @@ const LotesRecebidos = () => {
                     </option>
                   ))}
                 </select>
-
                 <select
                   style={styles.input3}
                   value={filtros.status}
@@ -402,14 +514,15 @@ const LotesRecebidos = () => {
                     setFiltros({ ...filtros, status: e.target.value })
                   }
                 >
-                  <option value="todos">Todos status</option>
+                  <option key="todos" value="todos">
+                    Todos status
+                  </option>
                   {statusLote.map((status) => (
                     <option key={status} value={status}>
                       {status}
                     </option>
                   ))}
                 </select>
-
                 <select
                   style={styles.input1}
                   value={filtros.classeTerapeutica}
@@ -420,7 +533,9 @@ const LotesRecebidos = () => {
                     })
                   }
                 >
-                  <option value="todos">Todas classes</option>
+                  <option key="todos" value="todos">
+                    Todas classes
+                  </option>
                   {classesTerapeuticas.map((classe) => (
                     <option key={classe} value={classe}>
                       {classe}
@@ -513,15 +628,11 @@ const LotesRecebidos = () => {
                           </td>
                           <td style={styles.tableCell}>
                             <span
-                              style={
-                                lote.statusLote === "Recebido"
-                                  ? styles.badgeReceived
-                                  : lote.statusLote === "Em Processamento"
-                                  ? styles.badgeProcessing
-                                  : styles.badgeStored
-                              }
+                              style={getStatusStyle(
+                                calculateStatus(lote.dataValidade)
+                              )}
                             >
-                              {lote.statusLote}
+                              {calculateStatus(lote.dataValidade)}
                             </span>
                           </td>
                           <td style={styles.tableCell}>
@@ -539,25 +650,24 @@ const LotesRecebidos = () => {
                                 style={styles.buttonOutline}
                                 onClick={() => editarLote(lote)}
                               >
-                                <Edit
+                                <FaEdit
                                   style={{ width: "1rem", height: "1rem" }}
                                 />
                               </button>
                               <button
                                 style={styles.buttonDanger}
-                                onClick={() => {
-                                  if (
-                                    window.confirm(
-                                      `Tem certeza que deseja excluir o lote ${lote.numeroLote}?`
-                                    )
-                                  ) {
-                                    excluirLote(lote.id);
-                                  }
-                                }}
+                                onClick={() =>
+                                  excluirLote(lote.id, lote.nomeMedicamento)
+                                }
+                                disabled={excluindo === lote.id}
                               >
-                                <Trash2
-                                  style={{ width: "1rem", height: "1rem" }}
-                                />
+                                {excluindo === lote.id ? (
+                                  "Excluindo..."
+                                ) : (
+                                  <FaTrashAlt
+                                    style={{ width: "1rem", height: "1rem" }}
+                                  />
+                                )}
                               </button>
                             </div>
                           </td>
@@ -569,7 +679,6 @@ const LotesRecebidos = () => {
               </div>
             </div>
 
-            {/* Estatísticas */}
             {lotes.length > 0 && (
               <div
                 style={{
@@ -604,13 +713,10 @@ const LotesRecebidos = () => {
                         color: "#1e40af",
                       }}
                     >
-                      {
-                        lotes.filter((lote) => lote.statusLote === "Armazenado")
-                          .length
-                      }
+                      {lotes.filter(lote => calculateStatus(lote.dataValidade) === "Vencido").length}
                     </div>
                     <div style={{ fontSize: "0.875rem", color: "#4b5563" }}>
-                      Lotes Armazenados
+                      Lotes Vencidos
                     </div>
                   </div>
                 </div>
@@ -667,13 +773,7 @@ const LotesRecebidos = () => {
           >
             <LoteForm
               formData={formData}
-              onFormChange={(field, value) =>
-                setFormData({ ...formData, [field]: value })
-              }
-              onDateChange={(field, date) =>
-                setFormData({ ...formData, [field]: new Date(date) })
-              }
-              onSave={salvarLote}
+              onSave={handleSaveLote}
               onCancel={() => {
                 setDialogAberto(false);
                 setLoteEditando(null);
@@ -683,6 +783,9 @@ const LotesRecebidos = () => {
               formasFarmaceuticas={formasFarmaceuticas}
               classesTerapeuticas={classesTerapeuticas}
               statusLote={statusLote}
+              loteId={loteId}
+              setDialogAberto={setDialogAberto} // Mantenha apenas uma vez
+              initializeFormData={initializeFormData}
             />
           </div>
         </div>
@@ -730,8 +833,21 @@ const styles = {
     display: "flex",
     alignItems: "center",
     position: "relative",
+    left: "2px",
+  },
+  buttonexcell: {
+    backgroundColor: "transparent",
+    color: "#1e40af",
+    border: "1px solid #1e40af",
+    padding: "0.5rem 1rem",
+    borderRadius: "0.375rem",
+    cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    position: "relative",
     left: "900px",
   },
+
   buttonOutlineHover: {
     backgroundColor: "#dbeafe",
   },
@@ -829,31 +945,28 @@ const styles = {
     backgroundColor: "#f9fafb",
   },
   badgeReceived: {
-    display: "inline-flex",
+    backgroundColor: "#dcfce7",
+    color: "#166534",
     padding: "0.25rem 0.5rem",
+    borderRadius: "0.375rem",
     fontSize: "0.75rem",
-    fontWeight: "600",
-    borderRadius: "9999px",
-    backgroundColor: "#fef08a",
-    color: "#92400e",
+    fontWeight: "500",
   },
   badgeProcessing: {
-    display: "inline-flex",
+    backgroundColor: "#fef9c3",
+    color: "#854d0e",
     padding: "0.25rem 0.5rem",
+    borderRadius: "0.375rem",
     fontSize: "0.75rem",
-    fontWeight: "600",
-    borderRadius: "9999px",
-    backgroundColor: "#bfdbfe",
-    color: "#1e40af",
+    fontWeight: "500",
   },
   badgeStored: {
-    display: "inline-flex",
+    backgroundColor: "#dbeafe",
+    color: "#1e40af",
     padding: "0.25rem 0.5rem",
+    borderRadius: "0.375rem",
     fontSize: "0.75rem",
-    fontWeight: "600",
-    borderRadius: "9999px",
-    backgroundColor: "#d1fae5",
-    color: "#065f46",
+    fontWeight: "500",
   },
 };
 
