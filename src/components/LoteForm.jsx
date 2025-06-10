@@ -21,6 +21,7 @@ const LoteForm = ({
     loteCompraMedicamento: "", // Novo campo de Lote de Compra
     responsavelRecebimento: "",
     dataRecebimento: new Date(),
+    gramas: 0,
   };
 
   const [formData, setFormData] = useState({
@@ -68,13 +69,13 @@ const LoteForm = ({
     setFormData((prev) => ({ ...prev, [field]: new Date(value) }));
   };
 
-    const handleSaveLote = (novoLote) => {
+  const handleSaveLote = (novoLote) => {
     if (loteEditando) {
-      setLotes(prevLotes =>
-        prevLotes.map(lote => lote.id === novoLote.id ? novoLote : lote)
+      setLotes((prevLotes) =>
+        prevLotes.map((lote) => (lote.id === novoLote.id ? novoLote : lote))
       );
     } else {
-      setLotes(prevLotes => [...prevLotes, novoLote]);
+      setLotes((prevLotes) => [...prevLotes, novoLote]);
     }
     setDialogAberto(false);
     setLoteEditando(null);
@@ -165,6 +166,25 @@ const LoteForm = ({
           />
         </div>
 
+        {/* Quantidade em Gramas */}
+        <div
+          style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}
+        >
+          <label htmlFor="gramas" style={styles.label}>
+            Quantidade em Gramas *
+          </label>
+          <input
+            id="gramas"
+            type="number"
+            value={formData.gramas}
+            onChange={(e) => handleNumberChange(e)} // Manuseia a alteração do valor
+            placeholder="Quantidade em gramas"
+            style={styles.input}
+            min="0"
+            required
+          />
+        </div>
+
         {/* Lote de Compra do Medicamento */}
         <div
           style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}
@@ -225,7 +245,7 @@ const LoteForm = ({
           style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}
         >
           <label htmlFor="quantidadeRecebida" style={styles.label}>
-            Quantidade Recebida *
+            Quantidade Recebida lotes *
           </label>
           <input
             id="quantidadeRecebida"

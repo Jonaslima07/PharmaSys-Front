@@ -8,15 +8,13 @@ const BatchForm = ({ batch, onClose, onSave }) => {
     id: null,
     number: "",
     lotNumber: "", //lote pharma
-    expirationDate: "", //lote fabricação
+    expirationDate: "", //lote compra
     manufacturer: "",
     quantity: 0,
     medicationName: "",
     medicationImage: "", // Agora a imagem será em base64
     manufacturingDate: "",
     grams: 0, // Adicionando o campo gramas
-    therapeuticClass: "", // Novo campo para categoria ou classe terapêutica
-    pharmaceuticalForm: "", // Novo campo para forma farmacêutica
   });
 
   const [formErrors, setFormErrors] = useState({
@@ -27,8 +25,6 @@ const BatchForm = ({ batch, onClose, onSave }) => {
     quantity: false,
     expirationDate: false,
     grams: false,
-    therapeuticClass: false, // new
-    pharmaceuticalForm: false, // new
   });
 
   const [isLoading, setIsLoading] = useState(false);
@@ -65,8 +61,6 @@ const BatchForm = ({ batch, onClose, onSave }) => {
         medicationImage: "",
         manufacturingDate: today,
         grams: 0,
-        therapeuticClass: "", // new
-        pharmaceuticalForm: "", // new
       });
     }
   }, [batch]);
@@ -83,7 +77,7 @@ const BatchForm = ({ batch, onClose, onSave }) => {
 
       const payload = {
         number: batchData.number,
-        lotNumber: batchData.lotNumber, //lote de fabricante
+        lotNumber: batchData.lotNumber, //lote de compra
         expirationDate: batchData.expirationDate,
         manufacturer: batchData.manufacturer,
         quantity: Number(batchData.quantity) || 0,
@@ -91,8 +85,7 @@ const BatchForm = ({ batch, onClose, onSave }) => {
         medicationImage: batchData.medicationImage || null, // A imagem estará em base64
         manufacturingDate: batchData.manufacturingDate,
         grams: batchData.grams, // send o campo gramas
-        therapeuticClass: batchData.therapeuticClass, // new
-        pharmaceuticalForm: batchData.pharmaceuticalForm, // new
+        
       };
 
       const response = await fetch(endpoint, {
@@ -158,7 +151,7 @@ const BatchForm = ({ batch, onClose, onSave }) => {
     const errors = {
       medicationName: !formData.medicationName.trim(),
       number: !formData.number.trim() || formData.number.length > 12, // Verificação para o número do lote de farmácia
-      lotNumber: !formData.lotNumber.trim() || formData.lotNumber.length > 12, // Verificação para o lote de fabricação
+      lotNumber: !formData.lotNumber.trim() || formData.lotNumber.length > 12, // Verificação para o lote de compra
       manufacturer: !formData.manufacturer.trim(),
       quantity: formData.quantity <= 0,
       expirationDate: manufacturingDateString >= expirationDateString, // Compara apenas as partes de data
@@ -256,7 +249,7 @@ const BatchForm = ({ batch, onClose, onSave }) => {
 
           <Form.Group className="mb-3" controlId="lotNumber">
             <Form.Label style={{ color: "#000000" }}>
-              Lote de Fabricante
+              Lote de Compra do Medicamento 
             </Form.Label>
             <Form.Control
               type="text"
@@ -273,7 +266,7 @@ const BatchForm = ({ batch, onClose, onSave }) => {
               type="invalid"
               style={{ marginTop: "-16px", fontSize: "14px", color: "#dc3545" }}
             >
-              Por favor, informe o lote de fabricante
+              Por favor, informe o lote de compra
             </Form.Control.Feedback>
           </Form.Group>
 
@@ -368,49 +361,6 @@ const BatchForm = ({ batch, onClose, onSave }) => {
               style={{ marginTop: "-16px", fontSize: "14px", color: "#dc3545" }}
             >
               A data de validade deve ser posterior à data de fabricação
-            </Form.Control.Feedback>
-          </Form.Group>
-
-          {/* Novos campos */}
-          <Form.Group className="mb-3" controlId="therapeuticClass">
-            <Form.Label style={{ color: "#000000" }}>
-              Classe Terapêutica
-            </Form.Label>
-            <Form.Control
-              type="text"
-              placeholder="Digite a categoria ou classe terapêutica"
-              value={formData.therapeuticClass}
-              onChange={(e) =>
-                handleInputChange("therapeuticClass", e.target.value)
-              }
-              isInvalid={formErrors.therapeuticClass}
-            />
-            <Form.Control.Feedback
-              type="invalid"
-              style={{ marginTop: "-16px", fontSize: "14px", color: "#dc3545" }}
-            >
-              Por favor, informe a categoria ou classe terapêutica
-            </Form.Control.Feedback>
-          </Form.Group>
-
-          <Form.Group className="mb-3" controlId="pharmaceuticalForm">
-            <Form.Label style={{ color: "#000000" }}>
-              Forma Farmacêutica
-            </Form.Label>
-            <Form.Control
-              type="text"
-              placeholder="Digite a forma farmacêutica (ex: xarope, comprimido)"
-              value={formData.pharmaceuticalForm}
-              onChange={(e) =>
-                handleInputChange("pharmaceuticalForm", e.target.value)
-              }
-              isInvalid={formErrors.pharmaceuticalForm}
-            />
-            <Form.Control.Feedback
-              type="invalid"
-              style={{ marginTop: "-16px", fontSize: "14px", color: "#dc3545" }}
-            >
-              Por favor, informe a forma farmacêutica
             </Form.Control.Feedback>
           </Form.Group>
 

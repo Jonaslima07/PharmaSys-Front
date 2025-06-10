@@ -88,7 +88,8 @@ const LotesRecebidos = () => {
     
     const loteComStatus = {
       ...novoLote,
-      statusLote: statusCalculado
+      statusLote: statusCalculado,
+      gramas: novoLote.gramas, // Adicionando o campo de gramas
     };
 
     if (loteEditando) {
@@ -117,6 +118,7 @@ const LotesRecebidos = () => {
       dataRecebimento: new Date(),
       unidadeMedida: "",
       loteCompraMedicamento:"",
+      gramas: 0,
     });
   };
 
@@ -537,7 +539,8 @@ const LotesRecebidos = () => {
                       <th style={styles.tableHeader}>Nome do Medicamento</th>
                       <th style={styles.tableHeader}>Data Fabricação</th>
                       <th style={styles.tableHeader}>Data Validade</th>
-                      <th style={styles.tableHeader}>Quantidade do medicamento</th>
+                      <th style={styles.tableHeader}>Quantidade medicamentos no lote</th>
+                      <th style={styles.tableHeader}>Gramas</th> 
                       <th style={styles.tableHeader}>Unidade</th>
                       <th style={styles.tableHeader}>Fornecedor</th>
                       <th style={styles.tableHeader}>Status</th>
@@ -586,6 +589,7 @@ const LotesRecebidos = () => {
                           <td style={styles.tableCell}>
                             {lote.quantidadeRecebida}
                           </td>
+                          <td style={styles.tableCell}>{lote.gramas}</td> 
                           <td style={styles.tableCell}>{lote.unidadeMedida}</td>
                           <td style={styles.tableCell}>{lote.fornecedor}</td>
                           <td style={styles.tableCell}>

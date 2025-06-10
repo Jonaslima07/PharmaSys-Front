@@ -103,9 +103,7 @@ const BatchList = () => {
       (batch.number || '').toLowerCase().includes(search) ||
       (batch.manufacturer || '').toLowerCase().includes(search) ||
       (batch.medicationName || '').toLowerCase().includes(search) ||
-      (batch.therapeuticClass || '').toLowerCase().includes(search) ||  // Filtrando pela categoria
-      (batch.pharmaceuticalForm || '').toLowerCase().includes(search) ||  // Filtrando pela forma farmacêutica
-      (batch.lotNumber || '').toLowerCase().includes(search)  // Adicionando filtro para o Lote de Fabricante
+      (batch.lotNumber || '').toLowerCase().includes(search)  // Adicionando filtro para o Lote de Compra
     );
   });
 
@@ -189,7 +187,7 @@ const BatchList = () => {
         <div className="batch-actions">
           <input
             type="text"
-            placeholder="Buscar por código, fabricante..."
+            placeholder="Buscar por lote de farmacia, ou codigo de compra..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="search-input"
@@ -222,14 +220,12 @@ const BatchList = () => {
                 <tr>
                   <th>Imagem</th>
                   <th>Lote de Farmácia</th>
-                  <th>Lote de Fabricante</th> {/* Nova coluna para o Lote de Fabricante */}
+                  <th>Lote de Compra</th> {/* Nova coluna para o Lote compra */}
                   <th>Medicamento</th>
                   <th>Fabricante</th>
                   <th>Validade</th>
                   <th>Quantidade</th>
                   <th>Gramas</th>
-                  <th>Classe Terapêutica</th> {/* Nova coluna para Categoria */}
-                  <th>Forma Farmacêutica</th> {/* Nova coluna para Forma Farmacêutica */}
                   <th>Status</th>
                   <th>Data de Fabricação</th>
                   <th>Ações</th>
@@ -264,8 +260,6 @@ const BatchList = () => {
                       <td>{formatDate(batch.expirationDate)}</td>
                       <td>{batch.quantity || '0'}</td>
                       <td>{batch.grams || '0'} gramas</td>
-                      <td>{batch.therapeuticClass || '-'}</td> {/* Exibe a categoria */}
-                      <td>{batch.pharmaceuticalForm || '-'}</td> {/* Exibe a forma farmacêutica */}
                       <td>
                         <span className="status-badge" style={getStatusStyle(status)}>
                           {status}
