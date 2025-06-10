@@ -47,12 +47,12 @@ const LotesRecebidos = () => {
   const [filtros, setFiltros] = useState({
     fornecedor: "todos",
     status: "todos",
-    classeTerapeutica: "todos",
+    unidade: "todas", // A chave unidade foi inicializada corretamente
   });
   const [dialogAberto, setDialogAberto] = useState(false);
   const [loteEditando, setLoteEditando] = useState(null);
   const [formData, setFormData] = useState({});
-  const [loteId, setLoteId] = useState(null); // Adicionando loteId no estado
+  const [loteId, setLoteId] = useState(null);
 
   const calculateStatus = (dataValidade) => {
     if (!dataValidade) return "A vencer";
@@ -83,8 +83,7 @@ const LotesRecebidos = () => {
         };
   };
 
-    const handleSaveLote = (novoLote) => {
-    // Calcula o status baseado na data de validade
+  const handleSaveLote = (novoLote) => {
     const statusCalculado = calculateStatus(novoLote.dataValidade);
     
     const loteComStatus = {
@@ -101,7 +100,6 @@ const LotesRecebidos = () => {
     }
   };
 
-  // Modifique a inicialização do formData para incluir o status calculado
   const initializeFormData = () => {
     const hoje = new Date();
     const umMesAFrente = new Date();
@@ -111,22 +109,17 @@ const LotesRecebidos = () => {
       numeroLote: "",
       nomeMedicamento: "",
       dataFabricacao: new Date(),
-      dataValidade: umMesAFrente, // Data padrão 1 mês à frente
+      dataValidade: umMesAFrente,
       quantidadeRecebida: 0,
       fornecedor: "",
-      numeroNotaFiscal: "",
-      formaFarmaceutica: "",
-      classeTerapeutica: "",
-      statusLote: calculateStatus(umMesAFrente), // Status calculado
-      observacoes: "",
+      statusLote: calculateStatus(umMesAFrente),
       responsavelRecebimento: "",
       dataRecebimento: new Date(),
-      numeroRegistroAnvisa: "",
       unidadeMedida: "",
+      loteCompraMedicamento:"",
     });
   };
 
-  // Buscar os lotes quando o componente for montado
   useEffect(() => {
     const fetchLotes = async () => {
       try {
@@ -135,7 +128,7 @@ const LotesRecebidos = () => {
           throw new Error("Erro ao carregar os lotes.");
         }
         const data = await response.json();
-        setLotes(data); // Atualiza o estado com os dados dos lotes
+        setLotes(data);
       } catch (error) {
         console.error("Erro ao buscar lotes:", error);
         toast({
@@ -148,20 +141,16 @@ const LotesRecebidos = () => {
     fetchLotes();
   }, []);
 
-      // Filtra os lotes conforme os critérios de busca e filtros
   const lotesFiltrados = lotes.filter((lote) => {
     try {
       const buscaLower = busca.toLowerCase();
       const statusLote = calculateStatus(lote.dataValidade);
       
-      // Verifica busca
       const matchBusca =
         (lote.nomeMedicamento?.toLowerCase().includes(buscaLower)) ||
         (lote.numeroLote?.toLowerCase().includes(buscaLower)) ||
-        (lote.numeroNotaFiscal?.toLowerCase().includes(buscaLower)) ||
         false;
 
-      // Verifica filtros
       const matchFornecedor =
         filtros.fornecedor === "todos" || 
         (lote.fornecedor && lote.fornecedor === filtros.fornecedor);
@@ -170,17 +159,17 @@ const LotesRecebidos = () => {
         filtros.status === "todos" || 
         statusLote === filtros.status;
 
-      const matchClasse =
-        filtros.classeTerapeutica === "todos" || 
-        (lote.classeTerapeutica && lote.classeTerapeutica === filtros.classeTerapeutica);
+       const matchUnidade =
+        filtros.unidade === "todas" || // Mudança de medicamento para unidade
+        (lote.unidadeMedida && lote.unidadeMedida === filtros.unidade);
 
-      return matchBusca && matchFornecedor && matchStatus && matchClasse;
+      return matchBusca && matchFornecedor && matchStatus && matchUnidade;
     } catch (error) {
       console.error("Erro ao filtrar lote:", lote, error);
-      return false; // Exclui lotes com problemas da listagem
+      return false;
     }
   });
-  // Validação dos campos do formulário
+
   const validarFormulario = () => {
     if (!formData.numeroLote || formData.numeroLote.length > 12) {
       toast({
@@ -235,22 +224,6 @@ const LotesRecebidos = () => {
       });
       return false;
     }
-    if (!formData.numeroNotaFiscal) {
-      toast({
-        title: "Erro de Validação",
-        description: "Número da nota fiscal é obrigatório.",
-        variant: "destructive",
-      });
-      return false;
-    }
-    if (!formData.formaFarmaceutica) {
-      toast({
-        title: "Erro de Validação",
-        description: "Forma farmacêutica é obrigatória.",
-        variant: "destructive",
-      });
-      return false;
-    }
     if (!formData.responsavelRecebimento) {
       toast({
         title: "Erro de Validação",
@@ -259,6 +232,14 @@ const LotesRecebidos = () => {
       });
       return false;
     }
+    if (!formData.loteCompraMedicamento || formData.loteCompraMedicamento.length > 12) {
+    toast({
+      title: "Erro de Validação",
+      description: "Número do lote de compra é obrigatório.",
+      variant: "destructive",
+    });
+    return false;
+  }
     if (!formData.dataRecebimento || formData.dataRecebimento > new Date()) {
       toast({
         title: "Erro de Validação",
@@ -280,17 +261,16 @@ const LotesRecebidos = () => {
   };
 
   const salvarLote = () => {
-  if (!validarFormulario()) return;
+    if (!validarFormulario()) return;
 
-  // Calcula o status baseado na data de validade
-  const statusCalculado = calculateStatus(formData.dataValidade);
+    const statusCalculado = calculateStatus(formData.dataValidade);
 
-  const novoLote = {
-    id: loteEditando?.id || Date.now().toString(),
-    ...formData,
-    statusLote: statusCalculado // Usa o status calculado
-  };
-    // Restante da função permanece igual
+    const novoLote = {
+      id: loteEditando?.id || Date.now().toString(),
+      ...formData,
+      statusLote: statusCalculado
+    };
+
     if (loteEditando) {
       setLotes(
         lotes.map((lote) => (lote.id === loteEditando.id ? novoLote : lote))
@@ -314,28 +294,26 @@ const LotesRecebidos = () => {
     initializeFormData();
   };
 
-  // Quando o usuário clica para editar um lote
   const editarLote = (lote) => {
     setLoteEditando(lote);
     setFormData(lote);
-    setLoteId(lote.id); // Definindo o loteId
+    setLoteId(lote.id);
     setDialogAberto(true);
   };
 
-  const [excluindo, setExcluindo] = useState(null); // Adicione este estado
+  const [excluindo, setExcluindo] = useState(null);
 
   const excluirLote = async (id, nomeMedicamento) => {
-    // Confirmação movida para dentro da função
     if (
       !window.confirm(
         `Tem certeza que deseja excluir o lote "${nomeMedicamento}"?`
       )
     ) {
-      return; // Sai da função se o usuário cancelar
+      return;
     }
 
     try {
-      setExcluindo(id); // Mostra loading
+      setExcluindo(id);
 
       const response = await fetch(
         `http://localhost:5000/lotesrecebidos/${id}`,
@@ -352,25 +330,27 @@ const LotesRecebidos = () => {
       toast.error("Falha ao excluir lote");
       console.error("Erro:", error);
     } finally {
-      setExcluindo(null); // Remove loading
+      setExcluindo(null);
     }
   };
 
-  // Exportar lotes para Excel (formato CSV)
   const exportarExcel = () => {
     const csvContent = [
       [
-        "Número do Lote",
+        "Núm Lote do medicamento",
+        "Núm do Lote Compra", 
         "Nome do Medicamento",
         "Data Fabricação",
         "Data Validade",
-        "Quantidade",
+        "Quantidade do medicamento",
         "Fornecedor",
         "Status",
         "Responsável",
+        
       ],
       ...lotesFiltrados.map((lote) => [
         lote.numeroLote,
+        lote.loteCompraMedicamento,
         lote.nomeMedicamento,
         format(lote.dataFabricacao, "dd/MM/yyyy"),
         format(lote.dataValidade, "dd/MM/yyyy"),
@@ -398,7 +378,6 @@ const LotesRecebidos = () => {
 
   return (
     <div style={styles.container}>
-      {/* Cabeçalho */}
       <header style={styles.header}>
         <div style={{ maxWidth: "1280px", margin: "0 auto" }}>
           <h1 style={{ fontSize: "1.875rem", fontWeight: "400" }}>
@@ -410,7 +389,6 @@ const LotesRecebidos = () => {
         </div>
       </header>
       <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "1.5rem" }}>
-        {/* Controles superiores */}
         <div style={styles.card}>
           <div style={styles.cardHeader}>
             <div
@@ -451,7 +429,6 @@ const LotesRecebidos = () => {
           </div>
 
           <div style={{ padding: "1.5rem" }}>
-            {/* Busca e Filtros */}
             <div style={{ marginBottom: "0.5rem" }}>
               <div
                 style={{
@@ -472,7 +449,7 @@ const LotesRecebidos = () => {
                 />
                 <input
                   style={{ ...styles.input, paddingLeft: "2.5rem" }}
-                  placeholder="Buscar por medicamento, número do lote ou nota fiscal..."
+                  placeholder="Buscar por medicamento ou número do lote..."
                   value={busca}
                   onChange={(e) => setBusca(e.target.value)}
                 />
@@ -525,27 +502,23 @@ const LotesRecebidos = () => {
                 </select>
                 <select
                   style={styles.input1}
-                  value={filtros.classeTerapeutica}
+                  value={filtros.unidadeMedida}
                   onChange={(e) =>
-                    setFiltros({
-                      ...filtros,
-                      classeTerapeutica: e.target.value,
-                    })
+                    setFiltros({ ...filtros, unidade: e.target.value })
                   }
                 >
-                  <option key="todos" value="todos">
-                    Todas classes
+                  <option key="todas" value="todas">
+                    Todas as unidades
                   </option>
-                  {classesTerapeuticas.map((classe) => (
-                    <option key={classe} value={classe}>
-                      {classe}
+                  {unidadesMedida.map((unidade) => (
+                    <option key={unidade} value={unidade}>
+                      {unidade}
                     </option>
                   ))}
                 </select>
               </div>
             </div>
 
-            {/* Tabela de Lotes */}
             <div
               style={{
                 borderRadius: "0.5rem",
@@ -559,20 +532,17 @@ const LotesRecebidos = () => {
                 <table style={styles.table}>
                   <thead style={{ backgroundColor: "#dbeafe" }}>
                     <tr>
-                      <th style={styles.tableHeader}>Número do Lote</th>
+                      <th style={styles.tableHeader}>Núm Lote do medicamento</th>
+                      <th style={styles.tableHeader}>Núm do Lote Compra</th> 
                       <th style={styles.tableHeader}>Nome do Medicamento</th>
                       <th style={styles.tableHeader}>Data Fabricação</th>
                       <th style={styles.tableHeader}>Data Validade</th>
-                      <th style={styles.tableHeader}>Quantidade</th>
+                      <th style={styles.tableHeader}>Quantidade do medicamento</th>
                       <th style={styles.tableHeader}>Unidade</th>
                       <th style={styles.tableHeader}>Fornecedor</th>
-                      <th style={styles.tableHeader}>Nota Fiscal</th>
-                      <th style={styles.tableHeader}>Forma Farmacêutica</th>
-                      <th style={styles.tableHeader}>Classe Terapêutica</th>
                       <th style={styles.tableHeader}>Status</th>
                       <th style={styles.tableHeader}>Responsável</th>
                       <th style={styles.tableHeader}>Data Recebimento</th>
-                      <th style={styles.tableHeader}>Registro ANVISA</th>
                       <th style={styles.tableHeader}>Ações</th>
                     </tr>
                   </thead>
@@ -580,7 +550,7 @@ const LotesRecebidos = () => {
                     {lotesFiltrados.length === 0 ? (
                       <tr>
                         <td
-                          colSpan={15}
+                          colSpan={11}
                           style={{
                             textAlign: "center",
                             padding: "2rem",
@@ -603,6 +573,7 @@ const LotesRecebidos = () => {
                           }
                         >
                           <td style={styles.tableCell}>{lote.numeroLote}</td>
+                          <td style={styles.tableCell}>{lote.loteCompraMedicamento}</td> 
                           <td style={styles.tableCell}>
                             {lote.nomeMedicamento}
                           </td>
@@ -618,15 +589,6 @@ const LotesRecebidos = () => {
                           <td style={styles.tableCell}>{lote.unidadeMedida}</td>
                           <td style={styles.tableCell}>{lote.fornecedor}</td>
                           <td style={styles.tableCell}>
-                            {lote.numeroNotaFiscal}
-                          </td>
-                          <td style={styles.tableCell}>
-                            {lote.formaFarmaceutica}
-                          </td>
-                          <td style={styles.tableCell}>
-                            {lote.classeTerapeutica || "-"}
-                          </td>
-                          <td style={styles.tableCell}>
                             <span
                               style={getStatusStyle(
                                 calculateStatus(lote.dataValidade)
@@ -640,9 +602,6 @@ const LotesRecebidos = () => {
                           </td>
                           <td style={styles.tableCell}>
                             {format(lote.dataRecebimento, "dd/MM/yyyy")}
-                          </td>
-                          <td style={styles.tableCell}>
-                            {lote.numeroRegistroAnvisa || "-"}
                           </td>
                           <td style={styles.tableCell}>
                             <div style={{ display: "flex", gap: "0.5rem" }}>
@@ -784,7 +743,7 @@ const LotesRecebidos = () => {
               classesTerapeuticas={classesTerapeuticas}
               statusLote={statusLote}
               loteId={loteId}
-              setDialogAberto={setDialogAberto} // Mantenha apenas uma vez
+              setDialogAberto={setDialogAberto}
               initializeFormData={initializeFormData}
             />
           </div>

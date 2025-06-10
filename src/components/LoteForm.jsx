@@ -18,14 +18,9 @@ const LoteForm = ({
     quantidadeRecebida: 0,
     unidadeMedida: "",
     fornecedor: "",
-    numeroNotaFiscal: "",
-    formaFarmaceutica: "",
-    classeTerapeutica: "",
+    loteCompraMedicamento: "", // Novo campo de Lote de Compra
     responsavelRecebimento: "",
     dataRecebimento: new Date(),
-    validadeLoteInterno: null,
-    numeroRegistroAnvisa: "",
-    observacoes: "",
   };
 
   const [formData, setFormData] = useState({
@@ -35,30 +30,6 @@ const LoteForm = ({
 
   // Opções para os selects
   const unidadesMedida = ["mg", "ml", "unidade", "frasco", "caixa", "blister"];
-  const formasFarmaceuticas = [
-    "Comprimido",
-    "Cápsula",
-    "Solução",
-    "Suspensão",
-    "Xarope",
-    "Pomada",
-    "Creme",
-    "Gel",
-    "Injeção",
-    "Gotas",
-  ];
-  const classesTerapeuticas = [
-    "Analgésicos",
-    "Antibióticos",
-    "Anti-inflamatórios",
-    "Antihipertensivos",
-    "Antidiabéticos",
-    "Antihistamínicos",
-    "Anticonvulsivantes",
-    "Antidepressivos",
-    "Vitaminas",
-    "Outros",
-  ];
 
   // Buscar dados do lote para edição
   useEffect(() => {
@@ -98,85 +69,44 @@ const LoteForm = ({
   };
 
     const handleSaveLote = (novoLote) => {
-    const loteComStatus = {
-      ...novoLote,
-      statusLote: calculateStatus(novoLote.dataValidade)
-    };
-    
     if (loteEditando) {
-      setLotes(lotes.map(l => l.id === loteComStatus.id ? loteComStatus : l));
+      setLotes(prevLotes =>
+        prevLotes.map(lote => lote.id === novoLote.id ? novoLote : lote)
+      );
     } else {
-      setLotes([...lotes, loteComStatus]);
+      setLotes(prevLotes => [...prevLotes, novoLote]);
     }
+    setDialogAberto(false);
+    setLoteEditando(null);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (isEditing) {
-      if (!loteId) {
-        console.error("ID do lote não fornecido para atualização");
-        return;
-      }
-      await handleUpdateLote(formData);
-    } else {
-      await handleCreateLote(formData);
-    }
-  };
-  const handleCreateLote = async (data) => {
+
     try {
-      const response = await fetch("http://localhost:5000/lotesrecebidos", {
-        method: "POST",
+      const method = isEditing ? "PUT" : "POST";
+      const url = isEditing
+        ? `http://localhost:5000/lotesrecebidos/${loteId}`
+        : "http://localhost:5000/lotesrecebidos";
+
+      const response = await fetch(url, {
+        method,
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(data),
+        body: JSON.stringify(formData),
       });
 
       if (!response.ok) {
-        throw new Error(`Erro ao criar lote: ${response.statusText}`);
+        throw new Error(`Erro ao ${isEditing ? "atualizar" : "criar"} lote`);
       }
 
-      const newData = await response.json();
-      console.log("Lote criado:", newData); // Debug log
-
-      // Chama a função onSave passada como prop para atualizar o estado no componente pai
-      onSave(newData);
-
-      // Fecha o diálogo após a criação do lote
+      const savedLote = await response.json();
+      onSave(savedLote); // Isso atualiza o estado no componente pai
       setDialogAberto(false);
-      initializeFormData(); // Reseta o formulário para o estado inicial
     } catch (error) {
-      console.error("Erro ao criar lote:", error);
-    }
-  };
-
-  const handleUpdateLote = async (data) => {
-    if (!loteId) {
-      console.error("Lote ID é inválido");
-      return;
-    }
-
-    try {
-      const response = await fetch(
-        `http://localhost:5000/lotesrecebidos/${loteId}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(data),
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error("Erro ao atualizar lote: " + response.statusText);
-      }
-
-      const updatedData = await response.json();
-      onSave(updatedData); // Isso vai disparar a atualização no estado
-      setDialogAberto(false); // Fecha o diálogo
-    } catch (error) {
-      console.error("Erro ao atualizar lote:", error);
+      console.error("Erro:", error);
+      // Mostrar mensagem de erro para o usuário
     }
   };
 
@@ -203,7 +133,7 @@ const LoteForm = ({
           style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}
         >
           <label htmlFor="numeroLote" style={styles.label}>
-            Número do Lote *
+            Num do Lote do medicamento *
           </label>
           <input
             id="numeroLote"
@@ -231,6 +161,25 @@ const LoteForm = ({
             onChange={handleChange}
             placeholder="Nome do medicamento"
             style={styles.input}
+            required
+          />
+        </div>
+
+        {/* Lote de Compra do Medicamento */}
+        <div
+          style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}
+        >
+          <label htmlFor="loteCompraMedicamento" style={styles.label}>
+            Lote de Compra do Medicamento *
+          </label>
+          <input
+            id="loteCompraMedicamento"
+            type="text"
+            value={formData.loteCompraMedicamento}
+            onChange={handleChange}
+            placeholder="Lote de compra"
+            style={styles.input}
+            maxLength={12}
             required
           />
         </div>
@@ -331,69 +280,6 @@ const LoteForm = ({
           />
         </div>
 
-        {/* Número da Nota Fiscal */}
-        <div
-          style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}
-        >
-          <label htmlFor="numeroNotaFiscal" style={styles.label}>
-            Número da Nota Fiscal *
-          </label>
-          <input
-            id="numeroNotaFiscal"
-            type="text"
-            value={formData.numeroNotaFiscal}
-            onChange={handleChange}
-            placeholder="Número da nota fiscal"
-            style={styles.input}
-            required
-          />
-        </div>
-
-        {/* Forma Farmacêutica */}
-        <div
-          style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}
-        >
-          <label htmlFor="formaFarmaceutica" style={styles.label}>
-            Forma Farmacêutica *
-          </label>
-          <select
-            id="formaFarmaceutica"
-            value={formData.formaFarmaceutica}
-            onChange={handleChange}
-            style={styles.input}
-            required
-          >
-            <option value="">Selecione a forma</option>
-            {formasFarmaceuticas.map((forma) => (
-              <option key={forma} value={forma}>
-                {forma}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Classe Terapêutica */}
-        <div
-          style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}
-        >
-          <label htmlFor="classeTerapeutica" style={styles.label}>
-            Classe Terapêutica
-          </label>
-          <select
-            id="classeTerapeutica"
-            value={formData.classeTerapeutica}
-            onChange={handleChange}
-            style={styles.input}
-          >
-            <option value="">Selecione a classe</option>
-            {classesTerapeuticas.map((classe) => (
-              <option key={classe} value={classe}>
-                {classe}
-              </option>
-            ))}
-          </select>
-        </div>
-
         {/* Responsável pelo Recebimento */}
         <div
           style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}
@@ -432,66 +318,6 @@ const LoteForm = ({
           />
         </div>
 
-        {/* Validade do Lote (Controle Interno) */}
-        <div
-          style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}
-        >
-          <label style={styles.label}>
-            Validade do Lote (Controle Interno)
-          </label>
-          <input
-            type="date"
-            value={
-              formData.validadeLoteInterno
-                ? format(formData.validadeLoteInterno, "yyyy-MM-dd")
-                : ""
-            }
-            onChange={(e) =>
-              handleDateChange("validadeLoteInterno", e.target.value)
-            }
-            style={styles.input}
-          />
-        </div>
-
-        {/* Número do Registro ANVISA */}
-        <div
-          style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}
-        >
-          <label htmlFor="numeroRegistroAnvisa" style={styles.label}>
-            Número do Registro ANVISA
-          </label>
-          <input
-            id="numeroRegistroAnvisa"
-            type="text"
-            value={formData.numeroRegistroAnvisa}
-            onChange={handleChange}
-            placeholder="Registro ANVISA"
-            style={styles.input}
-          />
-        </div>
-
-        {/* Observações Adicionais */}
-        <div
-          style={{
-            ...styles.fullWidth,
-            display: "flex",
-            flexDirection: "column",
-            gap: "0.5rem",
-          }}
-        >
-          <label htmlFor="observacoes" style={styles.label}>
-            Observações Adicionais
-          </label>
-          <textarea
-            id="observacoes"
-            value={formData.observacoes}
-            onChange={handleChange}
-            placeholder="Informações extras sobre o lote"
-            style={{ ...styles.input, minHeight: "100px" }}
-            rows={3}
-          />
-        </div>
-
         {/* Botões de ação */}
         <div
           style={{
@@ -522,7 +348,7 @@ const styles = {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
     gap: "1rem",
-    padding: "1rem 0 0rem", // Aumentei o padding top para o título jonas
+    padding: "1rem 0 0rem",
   },
   formHeader: {
     gridColumn: "1 / -1",
