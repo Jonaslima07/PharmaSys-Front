@@ -1,20 +1,20 @@
 import React, { useState, useEffect } from "react";
 import { Button, Form, Modal } from "react-bootstrap";
-import { toast, ToastContainer } from "react-toastify"; // Importando toast e ToastContainer
-import "react-toastify/dist/ReactToastify.css"; // Importando o estilo do toast
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const BatchForm = ({ batch, onClose, onSave }) => {
   const [formData, setFormData] = useState({
     id: null,
     number: "",
-    lotNumber: "", //lote pharma
-    expirationDate: "", //lote compra
+    lotNumber: "",
+    expirationDate: "",
     manufacturer: "",
     quantity: 0,
     medicationName: "",
-    medicationImage: "", // Agora a imagem será em base64
+    medicationImage: "",
     manufacturingDate: "",
-    grams: 0, // Adicionando o campo gramas
+    grams: 0,
   });
 
   const [formErrors, setFormErrors] = useState({
@@ -25,10 +25,30 @@ const BatchForm = ({ batch, onClose, onSave }) => {
     quantity: false,
     expirationDate: false,
     grams: false,
+    duplicateNumber: false,
+    duplicateLotNumber: false,
   });
 
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [existingBatches, setExistingBatches] = useState([]);
+
+  useEffect(() => {
+    const fetchExistingBatches = async () => {
+      try {
+        const response = await fetch("http://localhost:5000/lotes");
+        if (!response.ok) {
+          throw new Error("Erro ao carregar lotes existentes");
+        }
+        const data = await response.json();
+        setExistingBatches(data);
+      } catch (error) {
+        console.error("Erro ao buscar lotes existentes:", error);
+      }
+    };
+    
+    fetchExistingBatches();
+  }, []);
 
   useEffect(() => {
     if (batch) {
@@ -47,13 +67,15 @@ const BatchForm = ({ batch, onClose, onSave }) => {
         ...batch,
         expirationDate: formatDate(batch.expirationDate),
         manufacturingDate: formatDate(batch.manufacturingDate),
+        uniqueFarmacyLotId: generateUniqueId(batch.number),
+        uniquePurchaseLotId: generateUniqueId(batch.lotNumber),
       });
     } else {
       const today = new Date().toISOString().split("T")[0];
       setFormData({
         id: null,
         number: "",
-        lotNumber: "", //lote fabricante
+        lotNumber: "",
         expirationDate: today,
         manufacturer: "",
         quantity: 0,
@@ -61,9 +83,38 @@ const BatchForm = ({ batch, onClose, onSave }) => {
         medicationImage: "",
         manufacturingDate: today,
         grams: 0,
+        uniqueFarmacyLotId: "",
+        uniquePurchaseLotId: "",
       });
     }
   }, [batch]);
+
+  const generateUniqueId = (value) => {
+    return value ? `${value}_${new Date().getTime()}` : '';
+  };
+
+  const checkDuplicates = (number, lotNumber) => {
+    let isDuplicateNumber = false;
+    let isDuplicateLotNumber = false;
+    
+    const batchesToCheck = existingBatches.filter(existingBatch => 
+      !batch || existingBatch.id !== batch.id
+    );
+
+    if (number) {
+      isDuplicateNumber = batchesToCheck.some(
+        batch => batch.number === number
+      );
+    }
+
+    if (lotNumber) {
+      isDuplicateLotNumber = batchesToCheck.some(
+        batch => batch.lotNumber === lotNumber
+      );
+    }
+
+    return { isDuplicateNumber, isDuplicateLotNumber };
+  };
 
   const saveBatch = async (batchData) => {
     setIsLoading(true);
@@ -77,15 +128,16 @@ const BatchForm = ({ batch, onClose, onSave }) => {
 
       const payload = {
         number: batchData.number,
-        lotNumber: batchData.lotNumber, //lote de compra
+        lotNumber: batchData.lotNumber,
         expirationDate: batchData.expirationDate,
         manufacturer: batchData.manufacturer,
         quantity: Number(batchData.quantity) || 0,
         medicationName: batchData.medicationName,
-        medicationImage: batchData.medicationImage || null, // A imagem estará em base64
+        medicationImage: batchData.medicationImage || null,
         manufacturingDate: batchData.manufacturingDate,
-        grams: batchData.grams, // send o campo gramas
-        
+        grams: batchData.grams,
+        uniqueFarmacyLotId: batchData.uniqueFarmacyLotId,
+        uniquePurchaseLotId: batchData.uniquePurchaseLotId,
       };
 
       const response = await fetch(endpoint, {
@@ -104,14 +156,14 @@ const BatchForm = ({ batch, onClose, onSave }) => {
         } catch (e) {
           errorData = { message: `Erro HTTP! status: ${response.status}` };
         }
-        toast.error(errorData.message || "Erro ao salvar o lote"); // Exibe erro de toast
+        toast.error(errorData.message || "Erro ao salvar o lote");
         throw new Error(errorData.message || "Erro ao salvar o lote");
       }
 
       const result = await response.json();
       toast.success(
         isEdit ? "Lote atualizado com sucesso!" : "Lote adicionado com sucesso!"
-      ); // Exibe sucesso de toast
+      );
       return result;
     } catch (error) {
       setErrorMessage(error.message || "Erro ao salvar o lote");
@@ -122,7 +174,37 @@ const BatchForm = ({ batch, onClose, onSave }) => {
   };
 
   const handleInputChange = (name, value) => {
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    // Se estiver alterando number ou lotNumber, verifica duplicidade
+    if (name === "number" || name === "lotNumber") {
+      const { isDuplicateNumber, isDuplicateLotNumber } = checkDuplicates(
+        name === "number" ? value : formData.number,
+        name === "lotNumber" ? value : formData.lotNumber
+      );
+
+      setFormErrors(prev => ({
+        ...prev,
+        duplicateNumber: isDuplicateNumber,
+        duplicateLotNumber: isDuplicateLotNumber,
+      }));
+    }
+
+    if (name === "number") {
+      const uniqueFarmacyLotId = generateUniqueId(value);
+      setFormData((prev) => ({
+        ...prev,
+        [name]: value,
+        uniqueFarmacyLotId,
+      }));
+    } else if (name === "lotNumber") {
+      const uniquePurchaseLotId = generateUniqueId(value);
+      setFormData((prev) => ({
+        ...prev,
+        [name]: value,
+        uniquePurchaseLotId,
+      }));
+    } else {
+      setFormData((prev) => ({ ...prev, [name]: value }));
+    }
   };
 
   const handleImageChange = (e) => {
@@ -130,48 +212,56 @@ const BatchForm = ({ batch, onClose, onSave }) => {
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setFormData((prev) => ({ ...prev, medicationImage: reader.result })); // A imagem será convertida para base64
+        setFormData((prev) => ({ ...prev, medicationImage: reader.result }));
       };
-      reader.readAsDataURL(file); // Converte a imagem para base64
+      reader.readAsDataURL(file);
     }
   };
 
   const handleSubmit = async () => {
-    const manufacturingDate = new Date(
-      formData.manufacturingDate + "T00:00:00"
-    ); // Adiciona a hora para garantir que é 00:00 do dia
-    const expirationDate = new Date(formData.expirationDate + "T00:00:00"); // Adiciona a hora para garantir que é 00:00 do dia
+    const manufacturingDate = new Date(formData.manufacturingDate + "T00:00:00");
+    const expirationDate = new Date(formData.expirationDate + "T00:00:00");
 
-    // Pega apenas a data no formato YYYY-MM-DD para evitar problemas de horário
-    const manufacturingDateString = manufacturingDate
-      .toISOString()
-      .split("T")[0]; // data no formato YYYY-MM-DD
-    const expirationDateString = expirationDate.toISOString().split("T")[0]; // data no formato YYYY-MM-DD
+    const manufacturingDateString = manufacturingDate.toISOString().split("T")[0];
+    const expirationDateString = expirationDate.toISOString().split("T")[0];
+
+    
+    const { isDuplicateNumber, isDuplicateLotNumber } = checkDuplicates(
+      formData.number,
+      formData.lotNumber
+    );
 
     const errors = {
       medicationName: !formData.medicationName.trim(),
-      number: !formData.number.trim() || formData.number.length > 12, // Verificação para o número do lote de farmácia
-      lotNumber: !formData.lotNumber.trim() || formData.lotNumber.length > 12, // Verificação para o lote de compra
+      number: !formData.number.trim() || formData.number.length > 12,
+      lotNumber: !formData.lotNumber.trim() || formData.lotNumber.length > 12,
       manufacturer: !formData.manufacturer.trim(),
       quantity: formData.quantity <= 0,
-      expirationDate: manufacturingDateString >= expirationDateString, // Compara apenas as partes de data
-      grams: formData.grams <= 0, // Valida se as gramas são positivas
+      expirationDate: manufacturingDateString >= expirationDateString,
+      grams: formData.grams <= 0,
+      duplicateNumber: isDuplicateNumber,
+      duplicateLotNumber: isDuplicateLotNumber,
     };
 
     setFormErrors(errors);
 
     if (Object.values(errors).some((error) => error)) {
-      setErrorMessage("Por favor, preencha todos os campos corretamente!");
+      if (errors.duplicateNumber) {
+        setErrorMessage("O código do lote de farmácia já existe.");
+      } else if (errors.duplicateLotNumber) {
+        setErrorMessage("O lote de compra já existe.");
+      } else {
+        setErrorMessage("Por favor, preencha todos os campos corretamente!");
+      }
       return;
     }
 
     try {
       const batchToSave = { ...formData };
-
       await saveBatch(batchToSave);
-      onSave(); // Fecha o formulário e atualiza a lista
+      onSave();
     } catch (error) {
-      // O erro já foi tratado em saveBatch
+      console.error("Erro ao salvar lote:", error);
     }
   };
 
@@ -226,7 +316,7 @@ const BatchForm = ({ batch, onClose, onSave }) => {
 
           <Form.Group className="mb-3" controlId="number">
             <Form.Label style={{ color: "#000000" }}>
-              Codigo Lote de Farmacia
+              Código Lote de Farmácia
             </Form.Label>
             <Form.Control
               type="text"
@@ -237,13 +327,15 @@ const BatchForm = ({ batch, onClose, onSave }) => {
                   handleInputChange("number", e.target.value);
                 }
               }}
-              isInvalid={formErrors.number}
+              isInvalid={formErrors.number || formErrors.duplicateNumber}
             />
             <Form.Control.Feedback
               type="invalid"
               style={{ marginTop: "-16px", fontSize: "14px", color: "#dc3545" }}
             >
-              Por favor, informe o código do lote
+              {formErrors.duplicateNumber 
+                ? "Este código de lote de farmácia já existe" 
+                : "Por favor, informe o código do lote"}
             </Form.Control.Feedback>
           </Form.Group>
 
@@ -260,16 +352,19 @@ const BatchForm = ({ batch, onClose, onSave }) => {
                   handleInputChange("lotNumber", e.target.value);
                 }
               }}
-              isInvalid={formErrors.lotNumber}
+              isInvalid={formErrors.lotNumber || formErrors.duplicateLotNumber}
             />
             <Form.Control.Feedback
               type="invalid"
               style={{ marginTop: "-16px", fontSize: "14px", color: "#dc3545" }}
             >
-              Por favor, informe o lote de compra
+              {formErrors.duplicateLotNumber 
+                ? "Este lote de compra já existe" 
+                : "Por favor, informe o lote de compra"}
             </Form.Control.Feedback>
           </Form.Group>
 
+          {/* Restante do formulário permanece igual */}
           <Form.Group className="mb-3" controlId="manufacturer">
             <Form.Label style={{ color: "#000000" }}>Fabricante</Form.Label>
             <Form.Control
@@ -381,12 +476,10 @@ const BatchForm = ({ batch, onClose, onSave }) => {
           Cancelar
         </Button>
         <Button variant="primary" onClick={handleSubmit} disabled={isLoading}>
-          {isLoading ? "Salvando..." : formData.id ? "Atualizar" : "Salvar"}{" "}
-          Lote
+          {isLoading ? "Salvando..." : formData.id ? "Atualizar" : "Salvar"} Lote
         </Button>
       </Modal.Footer>
 
-      {/* Add ToastContainer here to display the notifications */}
       <ToastContainer
         position="top-right"
         autoClose={5000}

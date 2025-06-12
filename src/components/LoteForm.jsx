@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react"; // Importando useEffect
+import React, { useState, useEffect } from "react";
 import { format } from "date-fns";
 
 const LoteForm = ({
@@ -7,8 +7,7 @@ const LoteForm = ({
   onCancel,
   isEditing = false,
   loteId,
-  setDialogAberto, // Add this prop
-  initializeFormData, // Add this prop if you're using it
+  setDialogAberto,
 }) => {
   const defaultFormData = {
     numeroLote: "",
@@ -18,7 +17,7 @@ const LoteForm = ({
     quantidadeRecebida: 0,
     unidadeMedida: "",
     fornecedor: "",
-    loteCompraMedicamento: "", // Novo campo de Lote de Compra
+    loteCompraMedicamento: "",
     responsavelRecebimento: "",
     dataRecebimento: new Date(),
     gramas: 0,
@@ -29,11 +28,35 @@ const LoteForm = ({
     ...initialData,
   });
 
-  // Opções para os selects
+  const [formErrors, setFormErrors] = useState({
+    numeroLote: false,
+    loteCompraMedicamento: false,
+    duplicateNumeroLote: false,
+    duplicateLoteCompra: false,
+  });
+
+  const [existingLotes, setExistingLotes] = useState([]);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const unidadesMedida = ["mg", "ml", "unidade", "frasco", "caixa", "blister"];
 
-  // Buscar dados do lote para edição
   useEffect(() => {
+    const fetchLotes = async () => {
+      try {
+        const response = await fetch("http://localhost:5000/lotesrecebidos");
+        if (!response.ok) {
+          throw new Error("Erro ao carregar lotes existentes");
+        }
+        const data = await response.json();
+        setExistingLotes(data);
+      } catch (error) {
+        console.error("Erro ao buscar lotes existentes:", error);
+      }
+    };
+
+    fetchLotes();
+
     if (loteId) {
       fetchLote(loteId);
     }
@@ -54,9 +77,46 @@ const LoteForm = ({
     }
   };
 
-  // Manipuladores de eventos
+  const checkDuplicates = (numeroLote, loteCompra) => {
+    let isDuplicateNumeroLote = false;
+    let isDuplicateLoteCompra = false;
+    
+    // Filtra lotes existentes, excluindo o atual se estiver editando
+    const lotesToCheck = existingLotes.filter(existingLote => 
+      !isEditing || existingLote.id !== loteId
+    );
+
+    if (numeroLote) {
+      isDuplicateNumeroLote = lotesToCheck.some(
+        lote => lote.numeroLote === numeroLote
+      );
+    }
+
+    if (loteCompra) {
+      isDuplicateLoteCompra = lotesToCheck.some(
+        lote => lote.loteCompraMedicamento === loteCompra
+      );
+    }
+
+    return { isDuplicateNumeroLote, isDuplicateLoteCompra };
+  };
+
   const handleChange = (e) => {
     const { id, value } = e.target;
+    
+    if (id === "numeroLote" || id === "loteCompraMedicamento") {
+      const { isDuplicateNumeroLote, isDuplicateLoteCompra } = checkDuplicates(
+        id === "numeroLote" ? value : formData.numeroLote,
+        id === "loteCompraMedicamento" ? value : formData.loteCompraMedicamento
+      );
+
+      setFormErrors(prev => ({
+        ...prev,
+        duplicateNumeroLote: isDuplicateNumeroLote,
+        duplicateLoteCompra: isDuplicateLoteCompra,
+      }));
+    }
+
     setFormData((prev) => ({ ...prev, [id]: value }));
   };
 
@@ -69,20 +129,37 @@ const LoteForm = ({
     setFormData((prev) => ({ ...prev, [field]: new Date(value) }));
   };
 
-  const handleSaveLote = (novoLote) => {
-    if (loteEditando) {
-      setLotes((prevLotes) =>
-        prevLotes.map((lote) => (lote.id === novoLote.id ? novoLote : lote))
-      );
-    } else {
-      setLotes((prevLotes) => [...prevLotes, novoLote]);
-    }
-    setDialogAberto(false);
-    setLoteEditando(null);
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setErrorMessage("");
+    setIsSubmitting(true);
+
+    // Verifica duplicidade antes de validar outros campos
+    const { isDuplicateNumeroLote, isDuplicateLoteCompra } = checkDuplicates(
+      formData.numeroLote,
+      formData.loteCompraMedicamento
+    );
+
+    const errors = {
+      numeroLote: !formData.numeroLote.trim() || formData.numeroLote.length > 12,
+      loteCompraMedicamento: !formData.loteCompraMedicamento.trim() || formData.loteCompraMedicamento.length > 12,
+      duplicateNumeroLote: isDuplicateNumeroLote,
+      duplicateLoteCompra: isDuplicateLoteCompra,
+    };
+
+    setFormErrors(errors);
+
+    if (Object.values(errors).some((error) => error)) {
+      if (errors.duplicateNumeroLote) {
+        setErrorMessage("O número do lote de farmácia já existe.");
+      } else if (errors.duplicateLoteCompra) {
+        setErrorMessage("O lote de compra já existe.");
+      } else {
+        setErrorMessage("Por favor, preencha todos os campos corretamente!");
+      }
+      setIsSubmitting(false);
+      return;
+    }
 
     try {
       const method = isEditing ? "PUT" : "POST";
@@ -98,16 +175,29 @@ const LoteForm = ({
         body: JSON.stringify(formData),
       });
 
+      const responseData = await response.json();
+
       if (!response.ok) {
-        throw new Error(`Erro ao ${isEditing ? "atualizar" : "criar"} lote`);
+       
+        if (responseData.message && (responseData.message.includes("duplicat") || responseData.message.includes("já existe"))) {
+          throw new Error(responseData.message);
+        }
+        throw new Error(responseData.message || `Erro ao ${isEditing ? "atualizar" : "criar"} lote`);
       }
 
-      const savedLote = await response.json();
-      onSave(savedLote); // Isso atualiza o estado no componente pai
+      onSave(responseData);
       setDialogAberto(false);
     } catch (error) {
-      console.error("Erro:", error);
-      // Mostrar mensagem de erro para o usuário
+      console.error("Erro ao salvar lote:", error);
+      setErrorMessage(error.message || "Erro ao salvar o lote. Por favor, tente novamente.");
+      
+      if (error.message.includes("número do lote")) {
+        setFormErrors(prev => ({ ...prev, duplicateNumeroLote: true }));
+      } else if (error.message.includes("lote de compra")) {
+        setFormErrors(prev => ({ ...prev, duplicateLoteCompra: true }));
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -128,11 +218,23 @@ const LoteForm = ({
         </button>
       </div>
 
-      <div style={styles.container}>
+       {errorMessage && (
+        <div style={{
+          gridColumn: "1 / -1",
+          color: "#dc3545",
+          backgroundColor: "#f8d7da",
+          padding: "0.75rem",
+          borderRadius: "0.375rem",
+          marginBottom: "1rem",
+          border: "1px solid #f5c6cb"
+        }}>
+          {errorMessage}
+        </div>
+      )}
+
+        <div style={styles.container}>
         {/* Número do Lote */}
-        <div
-          style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}
-        >
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
           <label htmlFor="numeroLote" style={styles.label}>
             Num do Lote do medicamento *
           </label>
@@ -142,11 +244,20 @@ const LoteForm = ({
             value={formData.numeroLote}
             onChange={handleChange}
             placeholder="Ex: LOT123456"
-            style={styles.input}
+            style={{
+              ...styles.input,
+              borderColor: formErrors.duplicateNumeroLote ? "#dc3545" : "#1e40af"
+            }}
             maxLength={12}
             required
           />
+          {formErrors.duplicateNumeroLote && (
+            <span style={{ color: "#dc3545", fontSize: "0.875rem" }}>
+              Este número de lote já existe
+            </span>
+          )}
         </div>
+
 
         {/* Nome do Medicamento */}
         <div
@@ -185,10 +296,8 @@ const LoteForm = ({
           />
         </div>
 
-        {/* Lote de Compra do Medicamento */}
-        <div
-          style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}
-        >
+         {/* Lote de Compra do Medicamento */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
           <label htmlFor="loteCompraMedicamento" style={styles.label}>
             Lote de Compra do Medicamento *
           </label>
@@ -198,10 +307,18 @@ const LoteForm = ({
             value={formData.loteCompraMedicamento}
             onChange={handleChange}
             placeholder="Lote de compra"
-            style={styles.input}
+            style={{
+              ...styles.input,
+              borderColor: formErrors.duplicateLoteCompra ? "#dc3545" : "#1e40af"
+            }}
             maxLength={12}
             required
           />
+          {formErrors.duplicateLoteCompra && (
+            <span style={{ color: "#dc3545", fontSize: "0.875rem" }}>
+              Este lote de compra já existe
+            </span>
+          )}
         </div>
 
         {/* Data de Fabricação */}
@@ -362,7 +479,6 @@ const LoteForm = ({
 
 export default LoteForm;
 
-// Estilos
 const styles = {
   container: {
     display: "grid",
