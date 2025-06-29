@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import './logincss.css';
-import { GoogleLogin } from '@react-oauth/google'; // Importar GoogleLogin
+import { GoogleLogin } from '@react-oauth/google'; 
 
+//esta funcionando com o back
 const CriarContaForm = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -11,8 +12,8 @@ const CriarContaForm = () => {
   const [role, setRole] = useState('farmaceutico');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [phone, setPhone] = useState(''); // Adicionando telefone
-  const [registrationId, setRegistrationId] = useState(''); // Adicionando registro profissional
+  const [phone, setPhone] = useState(''); 
+  const [registrationId, setRegistrationId] = useState(''); 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -24,7 +25,7 @@ const CriarContaForm = () => {
 
   const checkEmailExists = async (email) => {
     try {
-      const response = await fetch(`http://localhost:5000/users?email=${email}`);
+      const response = await fetch(`http://localhost:5000/usuarios?email=${email}`);
       const data = await response.json();
       return data.length > 0;
     } catch (error) {
@@ -51,7 +52,7 @@ const CriarContaForm = () => {
 
   const createUser = async (userData) => {
     try {
-      const response = await fetch('http://localhost:5000/users', {
+      const response = await fetch('http://localhost:5000/usuarios', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

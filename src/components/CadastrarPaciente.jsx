@@ -2,17 +2,25 @@ import React, { useState, useEffect, useRef } from "react";
 import { Button, Modal, Form, Alert } from "react-bootstrap";
 import { useNavigate, useParams } from "react-router-dom";
 import PesquisaPaciente from "./PesquisaPaciente";
-import { ToastContainer, toast } from 'react-toastify';
+import { ToastContainer, toast } from "react-toastify";
 import {
-  Edit2,Trash2,User,CreditCard,FileText,Phone,MapPin, } from "lucide-react"; //Pill,Hash,Eye
+  Edit2,
+  Trash2,
+  User,
+  CreditCard,
+  FileText,
+  Phone,
+  MapPin,
+} from "lucide-react";
 
 const CadastrarPaciente = () => {
   const [pacientes, setPacientes] = useState([]);
+  const [filteredPacientes, setFilteredPacientes] = useState([]);
   const [formData, setFormData] = useState({
     id: null,
     nome: "",
-    numeroCartaoSUS: "",
-    identidade: "",
+    cartao_sus: "",
+    rg: "",
     medicamento: "",
     quantidade: 0,
     cpf: "",
@@ -21,8 +29,8 @@ const CadastrarPaciente = () => {
   });
   const [formErrors, setFormErrors] = useState({
     nome: false,
-    numeroCartaoSUS: false,
-    identidade: false,
+    cartao_sus: false,
+    rg: false,
     medicamento: false,
     quantidade: false,
     cpf: false,
@@ -35,71 +43,103 @@ const CadastrarPaciente = () => {
   const navigate = useNavigate();
   const { id } = useParams();
 
-  useEffect(() => {
-    loadPacientes();
-    if (id) {
-      loadPaciente(id);
-    }
-  }, [id]);
-
-  const loadPacientes = async () => {
+  // Função para pegar token do localStorage
+  const getToken = () => {
+    const userDataString = localStorage.getItem("userData");
+    if (!userDataString) return null;
     try {
-      const response = await fetch("http://localhost:5000/pacientes");
-      const data = await response.json();
-      setPacientes(data);
-    } catch (error) {
-      console.error("Erro ao carregar os pacientes", error);
-      alert("Erro", "Não foi possível carregar os pacientes.");
+      const userData = JSON.parse(userDataString);
+      return userData.token || null;
+    } catch {
+      return null;
     }
   };
 
-  const loadPaciente = async (id) => {
-    try {
-      const response = await fetch(`http://localhost:5000/pacientes/${id}`);
-      if (!response.ok) {
-        throw new Error(`Erro HTTP! status: ${response.status}`);
+  useEffect(() => {
+    (async () => {
+      try {
+        await loadPacientes();
+        if (id) {
+          await loadPaciente(id);
+        }
+      } catch (error) {
+        console.error("Erro ao carregar pacientes:", error);
       }
-      const data = await response.json();
-      setFormData(data);
-      setEditMode(true);
-      setModalVisible(true);
-    } catch (error) {
-      console.error("Erro ao carregar o paciente", error);
-      alert("Erro", "Não foi possível carregar o paciente.");
+    })();
+  }, [id]);
+
+  async function loadPacientes() {
+    const token = getToken();
+    if (!token) {
+      console.error("Token JWT não encontrado no localStorage");
+      return;
     }
+
+    const response = await fetch("http://localhost:5000/pacientes", {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error("Erro ao buscar pacientes");
+    }
+
+    const data = await response.json();
+    setPacientes(data);
+    setFilteredPacientes(data);
+  }
+
+  const loadPaciente = async (id) => {
+    const token = getToken();
+    if (!token) {
+      alert("Token JWT não encontrado");
+      return;
+    }
+
+    const response = await fetch(`http://localhost:5000/pacientes/${id}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      alert("Erro ao carregar o paciente");
+      return;
+    }
+
+    const data = await response.json();
+    setFormData(data);
+    setEditMode(true);
+    setModalVisible(true);
   };
 
   const savePaciente = async (paciente) => {
-    try {
-      let response;
-      const url = editMode
-        ? `http://localhost:5000/pacientes/${paciente.id}`
-        : "http://localhost:5000/pacientes";
-
-      const method = editMode ? "PUT" : "POST";
-
-      response = await fetch(url, {
-        method: method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(paciente),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Erro HTTP! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      loadPacientes();
-      resetForm();
-
-      // Adicione esta linha para mostrar o toast
-      toast.success(editMode ? "Paciente atualizado com sucesso!" : "Paciente cadastrado com sucesso!");
-
-      return data;
-    } catch (error) {
-      console.error("Erro ao salvar o paciente:", error);
-      alert("Erro ao salvar o paciente: " + error.message);
+    const token = getToken();
+    if (!token) {
+      alert("Token JWT não encontrado");
+      return;
     }
+
+    const response = await fetch("http://localhost:5000/pacientes", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(paciente),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.erro || "Erro ao cadastrar paciente");
+    }
+
+    toast.success("Paciente cadastrado com sucesso!");
+    await loadPacientes();
+    resetForm();
   };
 
   const deletePaciente = async (id) => {
@@ -112,33 +152,46 @@ const CadastrarPaciente = () => {
       return;
     }
 
-    try {
-      const response = await fetch(`http://localhost:5000/pacientes/${id}`, {
-        method: "DELETE",
-      });
-
-      if (!response.ok) {
-        throw new Error(`Erro HTTP! status: ${response.status}`);
-      }
-
-      loadPacientes();
-      resetForm();
-      alert("Paciente excluído com sucesso!");
-    } catch (error) {
-      console.error("Erro ao deletar o paciente:", error);
-      alert("Erro ao deletar o paciente: " + error.message);
+    const token = getToken();
+    if (!token) {
+      alert("Token JWT não encontrado");
+      return;
     }
+
+    const response = await fetch(`http://localhost:5000/pacientes/${id}`, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      alert("Erro ao deletar o paciente");
+      return;
+    }
+
+    toast.success("Paciente excluído com sucesso!");
+    await loadPacientes();
+    resetForm();
   };
 
   const handleInputChange = (name, value) => {
-    setFormData({ ...formData, [name]: value });
+    let processedValue = value;
+
+    if (name === "cpf") {
+      processedValue = value.replace(/\D/g, "").slice(0, 11);
+    }
+
+    setFormData({ ...formData, [name]: processedValue });
   };
 
   const handleAddPaciente = () => {
     const errors = {
       nome: !formData.nome,
-      numeroCartaoSUS: !/^\d{15}$/.test(formData.numeroCartaoSUS),
-      identidade: !/^\d{10}$/.test(formData.identidade),
+      cartao_sus: !/^\d{15}$/.test(formData.cartao_sus),
+      rg: !/^\d{10}$/.test(formData.rg),
+      medicamento: !formData.medicamento,
+      quantidade: !(formData.quantidade > 0),
       cpf: !/^\d{11}$/.test(formData.cpf),
       telefone: !/^\d{10,11}$/.test(formData.telefone),
       endereco: !formData.endereco,
@@ -147,12 +200,12 @@ const CadastrarPaciente = () => {
     setFormErrors(errors);
 
     if (Object.values(errors).includes(true)) {
-      alert("Por favor, preencha todos os campos!");
+      alert("Por favor, preencha todos os campos corretamente!");
       return;
     }
 
     if (!formData.id) {
-      formData.id = Date.now().toString();
+      setFormData((prev) => ({ ...prev, id: Date.now().toString() }));
     }
 
     savePaciente(formData);
@@ -162,8 +215,10 @@ const CadastrarPaciente = () => {
     setFormData({
       id: null,
       nome: "",
-      numeroCartaoSUS: "",
-      identidade: "",
+      cartao_sus: "",
+      rg: "",
+      medicamento: "",
+      quantidade: 0,
       cpf: "",
       telefone: "",
       endereco: "",
@@ -172,8 +227,10 @@ const CadastrarPaciente = () => {
     setEditMode(false);
     setFormErrors({
       nome: false,
-      numeroCartaoSUS: false,
-      identidade: false,
+      cartao_sus: false,
+      rg: false,
+      medicamento: false,
+      quantidade: false,
       cpf: false,
       telefone: false,
       endereco: false,
@@ -185,16 +242,7 @@ const CadastrarPaciente = () => {
       setFormData(paciente);
       setEditMode(true);
     } else {
-      setFormData({
-        id: null,
-        nome: "",
-        numeroCartaoSUS: "",
-        identidade: "",
-        cpf: "",
-        telefone: "",
-        endereco: "",
-      });
-      setEditMode(false);
+      resetForm();
     }
     setModalVisible(true);
   };
@@ -210,20 +258,14 @@ const CadastrarPaciente = () => {
   };
 
   const handleSearch = (searchTerm) => {
-    const filteredPacientes = pacientes.filter(
+    const filtered = pacientes.filter(
       (paciente) =>
-        paciente.cpf.includes(searchTerm) ||
-        paciente.identidade.includes(searchTerm)
+        paciente.cpf.includes(searchTerm) || paciente.rg.includes(searchTerm)
     );
-    setPacientes(filteredPacientes);
+    setFilteredPacientes(filtered);
   };
 
-  const maskCartaoSUS = (cartao) => {
-    if (!cartao) return "";
-    return cartao.replace(/(\d{3})\d{4}(\d{4})/, "$1****$2");
-  };
-
-  const PatientCard = ({ patient, onEdit, onDelete, onView }) => {
+  const PatientCard = ({ patient, onEdit, onDelete }) => {
     const [isHovered, setIsHovered] = useState(false);
 
     const handleEdit = (e) => {
@@ -239,12 +281,13 @@ const CadastrarPaciente = () => {
         onDelete(patient.id);
       }
     };
+
     return (
       <div
         style={{
           ...styles.patientCard,
           ...(isHovered ? styles.patientCardHover : {}),
-          width: "570px", // Antes era 380
+          width: "570px",
         }}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
@@ -256,8 +299,7 @@ const CadastrarPaciente = () => {
             <User color="#0066cc" size={20} />
             <h3 style={{ ...styles.patientName, width: "280px" }}>
               {patient.nome}
-            </h3>{" "}
-            {/* Limitando largura do nome */}
+            </h3>
           </div>
         </div>
 
@@ -272,7 +314,7 @@ const CadastrarPaciente = () => {
                 <div style={styles.infoContent}>
                   <div style={styles.label}>Cartão SUS:</div>
                   <div style={styles.monoValue}>
-                    {patient.numeroCartaoSUS} {/* Mostrando número completo */}
+                    {patient.cartao_sus || "Não informado"}
                   </div>
                 </div>
               </div>
@@ -280,8 +322,8 @@ const CadastrarPaciente = () => {
               <div style={styles.infoItem}>
                 <FileText style={styles.icon} size={16} />
                 <div style={styles.infoContent}>
-                  <div style={styles.label}>Identidade:</div>
-                  <div style={styles.value}>{patient.identidade}</div>
+                  <div style={styles.label}>Identidade (RG):</div>
+                  <div style={styles.value}>{patient.rg || "Não informado"}</div>
                 </div>
               </div>
             </div>
@@ -305,8 +347,8 @@ const CadastrarPaciente = () => {
               </div>
 
               <div style={styles.infoItem}>
-                <MapPin style={styles.icontext} size={16} />
-                <div style={styles.infoContent2}>
+                <MapPin style={styles.icon} size={16} />
+                <div style={styles.infoContent}>
                   <div style={styles.label}>Endereço:</div>
                   <div style={{ ...styles.value, ...styles.addressValue }}>
                     {patient.endereco}
@@ -340,9 +382,6 @@ const CadastrarPaciente = () => {
             <Trash2 size={16} color="#dc2626" />
           </button>
         </div>
-
-        {/* Indicador de interatividade */}
-        {isHovered && <div style={styles.hoverOverlay} />}
       </div>
     );
   };
@@ -351,21 +390,21 @@ const CadastrarPaciente = () => {
     <div style={styles.container}>
       <h2 style={styles.title}>Lista de Pacientes</h2>
       <PesquisaPaciente
-        pacientes={pacientes}
+        pacientes={filteredPacientes}
         onSelectPaciente={handleSelectPaciente}
         onSearch={handleSearch}
       />
       <ToastContainer
-      position="top-right"
-      autoClose={3000}
-      hideProgressBar={false}
-      newestOnTop={false}
-      closeOnClick
-      rtl={false}
-      pauseOnFocusLoss
-      draggable
-      pauseOnHover
-    />
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+      />
 
       <div style={styles.buttonContainer}>
         <Button
@@ -388,19 +427,18 @@ const CadastrarPaciente = () => {
         />
       </div>
 
-      {pacientes.length === 0 ? (
+      {filteredPacientes.length === 0 ? (
         <Alert variant="info" style={styles.emptyText}>
           Nenhum paciente cadastrado.
         </Alert>
       ) : (
         <div style={styles.patientsGrid}>
-          {pacientes.map((paciente) => (
+          {filteredPacientes.map((paciente) => (
             <PatientCard
               key={paciente.id}
               patient={paciente}
               onEdit={openModal}
               onDelete={deletePaciente}
-              onView={openModal}
             />
           ))}
         </div>
@@ -437,14 +475,14 @@ const CadastrarPaciente = () => {
               </Form.Label>
               <Form.Control
                 type="text"
-                placeholder="Número do Cartão SUS"
-                value={formData.numeroCartaoSUS}
+                name="cartao_sus"
+                value={formData.cartao_sus}
                 onChange={(e) =>
-                  handleInputChange("numeroCartaoSUS", e.target.value)
+                  handleInputChange(e.target.name, e.target.value)
                 }
-                isInvalid={formErrors.numeroCartaoSUS}
+                isInvalid={formErrors.cartao_sus}
               />
-              {formErrors.numeroCartaoSUS && (
+              {formErrors.cartao_sus && (
                 <Form.Control.Feedback
                   type="invalid"
                   style={{
@@ -462,14 +500,14 @@ const CadastrarPaciente = () => {
               <Form.Label style={{ color: "#000000" }}>Identidade</Form.Label>
               <Form.Control
                 type="text"
-                placeholder="Identidade"
-                value={formData.identidade}
+                name="rg"
+                value={formData.rg}
                 onChange={(e) =>
-                  handleInputChange("identidade", e.target.value)
+                  handleInputChange(e.target.name, e.target.value)
                 }
-                isInvalid={formErrors.identidade}
+                isInvalid={formErrors.rg}
               />
-              {formErrors.identidade && (
+              {formErrors.rg && (
                 <Form.Control.Feedback
                   type="invalid"
                   style={{
@@ -479,6 +517,57 @@ const CadastrarPaciente = () => {
                   }}
                 >
                   A identidade deve ter 10 dígitos numéricos.
+                </Form.Control.Feedback>
+              )}
+            </Form.Group>
+
+            <Form.Group className="mb-3" controlId="medicamento">
+              <Form.Label style={{ color: "#000000" }}>Medicamento</Form.Label>
+              <Form.Control
+                type="text"
+                placeholder="Medicamento"
+                value={formData.medicamento}
+                onChange={(e) =>
+                  handleInputChange("medicamento", e.target.value)
+                }
+                isInvalid={formErrors.medicamento}
+              />
+              {formErrors.medicamento && (
+                <Form.Control.Feedback
+                  type="invalid"
+                  style={{
+                    marginTop: "-16px",
+                    fontSize: "14px",
+                    color: "#dc3545",
+                  }}
+                >
+                  O medicamento é obrigatório.
+                </Form.Control.Feedback>
+              )}
+            </Form.Group>
+
+            <Form.Group className="mb-3" controlId="quantidade">
+              <Form.Label style={{ color: "#000000" }}>Quantidade</Form.Label>
+              <Form.Control
+                type="number"
+                min={1}
+                placeholder="Quantidade"
+                value={formData.quantidade}
+                onChange={(e) =>
+                  handleInputChange("quantidade", e.target.value)
+                }
+                isInvalid={formErrors.quantidade}
+              />
+              {formErrors.quantidade && (
+                <Form.Control.Feedback
+                  type="invalid"
+                  style={{
+                    marginTop: "-16px",
+                    fontSize: "14px",
+                    color: "#dc3545",
+                  }}
+                >
+                  A quantidade deve ser maior que zero.
                 </Form.Control.Feedback>
               )}
             </Form.Group>
@@ -575,10 +664,6 @@ const CadastrarPaciente = () => {
               style={{
                 backgroundColor: "#d32f2f",
                 borderColor: "#d32f2f",
-                "&:hover": {
-                  backgroundColor: "#b71c1c",
-                  borderColor: "#b71c1c",
-                },
               }}
             >
               Deletar
@@ -589,7 +674,6 @@ const CadastrarPaciente = () => {
     </div>
   );
 };
-
 // Constantes de estilo no final do arquivo
 const styles = {
   container: {
@@ -707,12 +791,10 @@ const styles = {
     flex: 1,
     minWidth: 0,
   },
-   infoContent2: {
-    flex: 1,
-    minWidth: 0,
-    position: 'relative',
-    left: '-270px'
-  },
+  infoContent2: {
+  position: 'relative',
+  left: '-270px' // Isso empurra o conteúdo para fora da visualização
+},
   icon: {
     color: "#4b5563",
     marginTop: "2px",
@@ -720,8 +802,8 @@ const styles = {
   icontext: {
     color: "#4b5563",
     marginTop: "2px",
-    position:"relative",
-    left:'-270px'
+    position: "relative",
+    left: "-270px",
   },
   label: {
     fontSize: "0.875rem",
