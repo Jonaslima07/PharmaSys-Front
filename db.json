@@ -60,6 +60,17 @@
       "createdAt": "2025-05-31T04:38:24.379Z",
       "currentPassword": "",
       "newPassword": "12345678"
+    },
+    {
+      "id": "1b7e",
+      "name": "jonas lindo",
+      "email": "jonaslima@gmail.com",
+      "birthDate": "2025-06-23",
+      "role": "farmaceutico",
+      "phone": "83994107558",
+      "registrationId": "CRF-123456",
+      "password": "123456",
+      "createdAt": "2025-06-23T18:55:33.392Z"
     }
   ],
   "auth": {
@@ -133,6 +144,15 @@
       "cpf": "90250823451",
       "telefone": "83995126178",
       "endereco": "Piloes Titara PB bairro da mangueira- R: timetoachibata - n 244"
+    },
+    {
+      "id": "1750705163140",
+      "nome": "calcinha gay",
+      "numeroCartaoSUS": "545534523223324",
+      "identidade": "1234567891",
+      "cpf": "70250823456",
+      "telefone": "83994107147",
+      "endereco": "rua capimbai"
     }
   ],
   "lotesrecebidos": [
@@ -777,7 +797,7 @@
       "codigo": "DISP-1749523086009"
     },
     {
-      "id": 1749690058724,
+      "id": "1749690058724",
       "medicamento": "Dipirona",
       "lote": "343434344542",
       "quantidade": 1,
