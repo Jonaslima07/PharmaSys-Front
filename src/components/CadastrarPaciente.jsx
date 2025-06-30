@@ -21,8 +21,8 @@ const CadastrarPaciente = () => {
     nome: "",
     cartao_sus: "",
     rg: "",
-    medicamento: "",
-    quantidade: 0,
+    // medicamento: "",
+    // quantidade: "",
     cpf: "",
     telefone: "",
     endereco: "",
@@ -31,8 +31,8 @@ const CadastrarPaciente = () => {
     nome: false,
     cartao_sus: false,
     rg: false,
-    medicamento: false,
-    quantidade: false,
+    // medicamento: false,
+    // quantidade: false,
     cpf: false,
     telefone: false,
     endereco: false,
@@ -69,28 +69,40 @@ const CadastrarPaciente = () => {
   }, [id]);
 
   async function loadPacientes() {
-    const token = getToken();
-    if (!token) {
-      console.error("Token JWT não encontrado no localStorage");
+  const token = getToken();
+  if (!token) {
+    console.error("Token JWT não encontrado no localStorage");
+    navigate("/login"); // redireciona
+    return;
+  }
+
+  const response = await fetch("http://localhost:5000/pacientes", {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    if (response.status === 401 && errorText.includes("expired")) {
+      // Token expirado: limpar localStorage e redirecionar
+      localStorage.removeItem("userData");
+      alert("Sua sessão expirou. Faça login novamente.");
+      navigate("/login");
       return;
     }
 
-    const response = await fetch("http://localhost:5000/pacientes", {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error("Erro ao buscar pacientes");
-    }
-
-    const data = await response.json();
-    setPacientes(data);
-    setFilteredPacientes(data);
+    throw new Error(
+      `Erro ao buscar pacientes. Status: ${response.status}. Mensagem: ${errorText}`
+    );
   }
+
+  const data = await response.json();
+  setPacientes(data);
+  setFilteredPacientes(data);
+}
 
   const loadPaciente = async (id) => {
     const token = getToken();
@@ -142,6 +154,29 @@ const CadastrarPaciente = () => {
     resetForm();
   };
 
+  const editPaciente = async (paciente) => {
+    const token = getToken();
+    if (!token) {
+      alert("Token JWT não encontrado");
+      return;
+    }
+    const response = await fetch(`http://localhost:5000/pacientes/${paciente.id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify(paciente)
+    });
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.erro || "Erro ao editar paciente");
+    }
+    toast.success("Paciente editado com sucesso!");
+    await loadPacientes();
+    resetForm();
+  };
+
   const deletePaciente = async (id) => {
     if (!id || id <= 0) {
       alert("ID inválido. Não é possível excluir este paciente.");
@@ -185,13 +220,13 @@ const CadastrarPaciente = () => {
     setFormData({ ...formData, [name]: processedValue });
   };
 
-  const handleAddPaciente = () => {
+  const handleAddPaciente = async () => {
     const errors = {
       nome: !formData.nome,
       cartao_sus: !/^\d{15}$/.test(formData.cartao_sus),
       rg: !/^\d{10}$/.test(formData.rg),
-      medicamento: !formData.medicamento,
-      quantidade: !(formData.quantidade > 0),
+      // medicamento: !formData.medicamento,
+      // quantidade: !(parseInt(formData.quantidade) > 0),
       cpf: !/^\d{11}$/.test(formData.cpf),
       telefone: !/^\d{10,11}$/.test(formData.telefone),
       endereco: !formData.endereco,
@@ -204,11 +239,15 @@ const CadastrarPaciente = () => {
       return;
     }
 
-    if (!formData.id) {
-      setFormData((prev) => ({ ...prev, id: Date.now().toString() }));
+    try {
+      if (editMode) {
+        await editPaciente(formData);
+      } else {
+        await savePaciente(formData);
+      }
+    } catch (error) {
+      alert(error.message);
     }
-
-    savePaciente(formData);
   };
 
   const resetForm = () => {
@@ -217,8 +256,8 @@ const CadastrarPaciente = () => {
       nome: "",
       cartao_sus: "",
       rg: "",
-      medicamento: "",
-      quantidade: 0,
+      // medicamento: "",
+      // quantidade: "",
       cpf: "",
       telefone: "",
       endereco: "",
@@ -229,8 +268,8 @@ const CadastrarPaciente = () => {
       nome: false,
       cartao_sus: false,
       rg: false,
-      medicamento: false,
-      quantidade: false,
+      // medicamento: false,
+      // quantidade: false,
       cpf: false,
       telefone: false,
       endereco: false,
@@ -256,6 +295,7 @@ const CadastrarPaciente = () => {
       });
     }
   };
+
 
   const handleSearch = (searchTerm) => {
     const filtered = pacientes.filter(
@@ -521,7 +561,7 @@ const CadastrarPaciente = () => {
               )}
             </Form.Group>
 
-            <Form.Group className="mb-3" controlId="medicamento">
+            {/* <Form.Group className="mb-3" controlId="medicamento">
               <Form.Label style={{ color: "#000000" }}>Medicamento</Form.Label>
               <Form.Control
                 type="text"
@@ -544,9 +584,9 @@ const CadastrarPaciente = () => {
                   O medicamento é obrigatório.
                 </Form.Control.Feedback>
               )}
-            </Form.Group>
+            </Form.Group> */}
 
-            <Form.Group className="mb-3" controlId="quantidade">
+            {/* <Form.Group className="mb-3" controlId="quantidade">
               <Form.Label style={{ color: "#000000" }}>Quantidade</Form.Label>
               <Form.Control
                 type="number"
@@ -570,7 +610,7 @@ const CadastrarPaciente = () => {
                   A quantidade deve ser maior que zero.
                 </Form.Control.Feedback>
               )}
-            </Form.Group>
+            </Form.Group> */}
 
             <Form.Group className="mb-3" controlId="cpf">
               <Form.Label style={{ color: "#000000" }}>CPF</Form.Label>

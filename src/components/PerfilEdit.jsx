@@ -14,6 +14,7 @@ const PerfilEdit = () => {
     phone: "",
     registrationId: "",
     createdAt: "",
+    emailConfirmed: false,
   });
 
   const [showPasswords, setShowPasswords] = useState({
@@ -31,6 +32,7 @@ const PerfilEdit = () => {
     currentPassword: "",
     newPassword: "",
     confirmNewPassword: "",
+    role: "",
   });
 
   // Buscar dados do usuário logado
@@ -65,6 +67,7 @@ const PerfilEdit = () => {
           phone: data.phone || "",
           registrationId: data.registrationId || "",
           createdAt: data.createdAt,
+          emailConfirmed: data.emailConfirmed || false,
         });
 
         setFormData({
@@ -75,7 +78,16 @@ const PerfilEdit = () => {
           currentPassword: "",
           newPassword: "",
           confirmNewPassword: "",
+          role: data.role,
         });
+
+        // Se farmacêutico e sem registro, alertar e abrir edição
+        if (data.role === "farmaceutico" && !data.registrationId) {
+          toast.warn(
+            "Por favor, preencha seu Registro Profissional (CRF) para concluir o cadastro."
+          );
+          setEditMode(true);
+        }
       } catch (error) {
         console.error("Erro ao buscar usuário:", error);
         toast.error("Não foi possível carregar os dados do usuário.");
@@ -103,19 +115,18 @@ const PerfilEdit = () => {
       currentPassword: "",
       newPassword: "",
       confirmNewPassword: "",
+      role: userData.role,
     });
     setEditMode(false);
     toast.info("Edição cancelada");
   };
 
   const validateForm = () => {
-    // Validação do nome
     if (!formData.name.trim()) {
       toast.error("Por favor, informe seu nome completo");
       return false;
     }
 
-    // Validação do email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!formData.email.trim()) {
       toast.error("Por favor, informe seu email");
@@ -125,13 +136,17 @@ const PerfilEdit = () => {
       return false;
     }
 
-    // Validação do telefone (opcional, mas se informado deve ter pelo menos 10 dígitos)
     if (formData.phone && formData.phone.replace(/\D/g, "").length < 10) {
       toast.error("Telefone deve ter pelo menos 10 dígitos");
       return false;
     }
 
-    // Validação de senha (se algum campo de senha for preenchido)
+    // Validação Registro Profissional para farmacêuticos
+    if (formData.role === "farmaceutico" && !formData.registrationId.trim()) {
+      toast.error("Registro Profissional é obrigatório para farmacêuticos.");
+      return false;
+    }
+
     if (
       formData.currentPassword ||
       formData.newPassword ||
@@ -152,7 +167,6 @@ const PerfilEdit = () => {
         return false;
       }
 
-      // Verifica se todas as senhas são iguais
       if (
         formData.currentPassword &&
         formData.newPassword &&
@@ -191,7 +205,7 @@ const PerfilEdit = () => {
       const response = await fetch(
         `http://localhost:5000/users/${userData.id}`,
         {
-          method: "PATCH",
+          method: "PATCH", // Confirme que backend aceita PATCH
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
@@ -358,6 +372,7 @@ const PerfilEdit = () => {
                       value={formData.registrationId}
                       onChange={handleChange}
                       style={styles.input}
+                      required={formData.role === "farmaceutico"}
                     />
                   </div>
                 </div>
@@ -480,139 +495,44 @@ const PerfilEdit = () => {
                 </div>
               </form>
             ) : (
-              <div style={styles.infoContainer}>
-                <div style={styles.infoItem}>
-                  <span style={styles.infoLabel}>Nome completo</span>
-                  <span style={styles.infoValue}>{userData.name}</span>
-                </div>
-
-                <div style={styles.infoItem}>
-                  <span style={styles.infoLabel}>Telefone</span>
-                  <span style={styles.infoValue}>
-                    {userData.phone || "Não informado"}
-                  </span>
-                </div>
-
-                <div style={styles.infoItem}>
-                  <span style={styles.infoLabel2}>Email</span>
-                  <span style={styles.infoValue2}>{userData.email}</span>
-                </div>
-
-                <div style={styles.infoItem}>
-                  <span style={styles.infoLabel3}>Registro Profissional</span>
-                  <span style={styles.infoValue3}>
+              <div style={styles.userInfo}>
+                <p>
+                  <strong>Nome:</strong> {userData.name}
+                </p>
+                <p>
+                  <strong>Email:</strong> {userData.email}
+                </p>
+                <p>
+                  <strong>Telefone:</strong> {userData.phone || "Não informado"}
+                </p>
+                {userData.role === "farmaceutico" && (
+                  <p>
+                    <strong>Registro Profissional:</strong>{" "}
                     {userData.registrationId || "Não informado"}
-                  </span>
-                </div>
+                  </p>
+                )}
+                <p>
+                  <strong>Usuário desde:</strong> {formatDate(userData.createdAt)}
+                </p>
               </div>
             )}
           </div>
         </div>
-      </div>
 
-      <div style={styles.sidebarContainer}>
-        <div style={styles.card2}>
-          <div style={styles.avatarContainer}>
-            <div style={styles.avatar}>
-              {userData.name
-                .split(" ")
-                .map((name) => name[0])
-                .join("")}
-            </div>
-          </div>
+        <div style={styles.sidebar}>
+          <button onClick={handleLogout} style={styles.logoutButton}>
+            Sair
+          </button>
 
-          <h2 style={styles.userName}>{userData.name}</h2>
-          <p style={styles.userRole}>{userData.role}</p>
-
-          <div style={styles.divider}></div>
-
-          <div style={styles.section}>
-            <h3 style={styles.sectionTitule}>Conta</h3>
-            <p style={styles.sectionTexto}>
-              Criada em: {formatDate(userData.createdAt)}
+          <div style={{ marginTop: 20 }}>
+            <p>
+              <strong>Status do E-mail:</strong>{" "}
+              {userData.emailConfirmed ? (
+                <span style={{ color: "green" }}>Confirmado</span>
+              ) : (
+                <span style={{ color: "red" }}>Não confirmado</span>
+              )}
             </p>
-            <p style={styles.sectionTexto2}>
-              Último acesso: Hoje,{" "}
-              {new Date().toLocaleTimeString("pt-BR", {
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
-            </p>
-          </div>
-
-          <div style={styles.divider}></div>
-
-          <div style={styles.section}>
-            <h3 style={styles.sectionTitule}>Status</h3>
-            <span style={styles.statusBadge}>Ativo</span>
-          </div>
-
-          <div style={styles.divider}></div>
-
-          <div style={styles.section}>
-            <h3 style={styles.sectionTitule2}>Ações da Conta</h3>
-            <ul style={styles.actionsList}>
-              <li style={styles.actionItem}>
-                <svg
-                  style={styles.actionIcon}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-                  />
-                </svg>
-                Segurança da conta
-              </li>
-              <li style={styles.actionItem}>
-                <svg
-                  style={styles.actionIcon}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31 2.37 2.37a1.724 1.724 0 00-2.572 1.065z"
-                  />
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                  />
-                </svg>
-                Preferências
-              </li>
-              <li
-                style={{ ...styles.actionItem, color: "#e53e3e" }}
-                onClick={handleLogout}
-              >
-                <svg
-                  style={{ ...styles.actionIcon, color: "#e53e3e" }}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-                  />
-                </svg>
-                Sair
-              </li>
-            </ul>
           </div>
         </div>
       </div>
@@ -622,368 +542,184 @@ const PerfilEdit = () => {
 
 const styles = {
   container: {
-    maxWidth: "800px",
-    margin: "0 auto",
-    padding: "20px",
-    fontFamily: "Arial, sans-serif",
-    color: "#333",
+    padding: 20,
+    fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
   },
-
   mainTitle: {
-    fontSize: "24px",
-    marginBottom: "20px",
-    color: "#2c3e50",
+    fontSize: 28,
     fontWeight: "bold",
-    position: "relative",
-    left: "-190px",
+    marginBottom: 20,
+    textAlign: "center",
   },
   content: {
     display: "flex",
-    flexDirection: "column",
-    gap: "20px",
+    gap: 30,
+    justifyContent: "center",
   },
   mainSection: {
-    flex: 1,
+    flex: 2,
   },
   card: {
-    position: "relative",
-    left: "-190px",
     backgroundColor: "#fff",
-    borderRadius: "8px",
-    padding: "20px",
-    boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+    borderRadius: 8,
+    boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+    padding: 20,
   },
   cardHeader: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: "20px",
   },
   sectionTitle: {
-    fontSize: "20px",
+    margin: 0,
     fontWeight: "600",
-    color: "#2c3e50",
+    fontSize: 22,
   },
   editButton: {
     display: "flex",
     alignItems: "center",
-    background: "none",
-    border: "none",
-    color: "#3498db",
+    gap: 6,
     cursor: "pointer",
-    fontSize: "14px",
+    border: "none",
+    backgroundColor: "transparent",
+    color: "#007bff",
+    fontWeight: "600",
   },
   editIcon: {
-    width: "16px",
-    height: "16px",
-    marginRight: "5px",
+    width: 20,
+    height: 20,
   },
   form: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "20px",
+    marginTop: 15,
   },
   formGrid: {
     display: "grid",
-    gridTemplateColumns: "1fr 1fr",
-    gap: "15px",
+    gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+    gap: 20,
   },
   formGroup: {
     display: "flex",
     flexDirection: "column",
-    gap: "5px",
-    height:'70px'
   },
   label: {
-    fontSize: "14px",
-    color: "#7f8c8d",
-    marginBottom: "5px",
-  },
-  label1: {
-    fontSize: "14px",
-    color: "#7f8c8d",
-    marginBottom: "5px",
-    position:'relative',
-    left:'370px',
-    top:'-50px'
-  },
-  input1: {
-    padding: "8px 12px",
-    border: "1px solid #ddd",
-    borderRadius: "4px",
-    fontSize: "14px",
-    width:'720px'
-  },
-  labelnova: {
-    fontSize: "14px",
-    color: "#7f8c8d",
-    marginBottom: "5px",
-    position:'relative',
-    left:'2px',
-    top:'20px'
-  },
-  input2: {
-    padding: "8px 12px",
-    border: "1px solid #ddd",
-    borderRadius: "4px",
-    fontSize: "14px",
-    position:'relative',
-    width:'355px',
-    top:'16px'
-    
-  },
-  input3: {
-    padding: "8px 12px",
-    border: "1px solid #ddd",
-    borderRadius: "4px",
-    fontSize: "14px",
-    position:'relative',
-    top:'-53px',
-    left:'370px',
-    width:'350px',
+    fontWeight: "600",
+    marginBottom: 6,
   },
   input: {
-    padding: "8px 12px",
-    border: "1px solid #ddd",
-    borderRadius: "4px",
-    fontSize: "14px",
+    padding: 8,
+    borderRadius: 4,
+    border: "1px solid #ccc",
+    fontSize: 16,
   },
   divider: {
-    height: "1px",
-    backgroundColor: "#ecf0f1",
-    margin: "15px 0",
+    margin: "20px 0",
+    borderTop: "1px solid #ccc",
   },
   subsectionTitle: {
-    fontSize: "16px",
+    fontSize: 20,
     fontWeight: "600",
-    color: "#2c3e50",
-    marginBottom: "15px",
+    marginBottom: 15,
   },
-  formActions: {
-    display: "flex",
-    justifyContent: "flex-end",
-    gap: "10px",
-    marginTop: "1px",
-  },
-  cancelButton: {
-    padding: "8px 16px",
-    border: "1px solid #ddd",
-    borderRadius: "4px",
-    background: "none",
-    cursor: "pointer",
-    color: "#7f8c8d",
-    position:'relative',
-    top:'-30px',
-  },
-  submitButton: {
-    padding: "8px 16px",
-    border: "none",
-    borderRadius: "4px",
-    background: "#3498db",
-    color: "white",
-    cursor: "pointer",
-    position:'relative',
-    top:'-30px',
-  },
-  infoContainer: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "15px",
-    height: "120px",
-    backgroundColor: " rgb(255, 255, 255)",
-  },
-  infoItem: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "5px",
-  },
-  infoLabel: {
-    fontSize: "14px",
-    color: "#7f8c8d",
-  },
-  infoLabel2: {
-    fontSize: "14px",
-    color: "#7f8c8d",
-    position: "relative",
-    left: "375px",
-    top: "-130px",
-  },
-  infoValue2: {
-    fontSize: "16px",
-    fontWeight: "500",
-    position: "relative",
-    left: "375px",
-    top: "-130px",
-  },
-
-  infoLabel3: {
-    fontSize: "14px",
-    color: "#7f8c8d",
-    position: "relative",
-    left: "375px",
-    top: "-130px",
-  },
-  infoValue3: {
-    fontSize: "16px",
-    fontWeight: "500",
-    position: "relative",
-    left: "375px",
-    top: "-130px",
-  },
-  infoValue: {
-    fontSize: "16px",
-    fontWeight: "500",
-  },
-  toast: {
-    padding: "12px 16px",
-    borderRadius: "4px",
-    border: "1px solid",
-    marginTop: "10px",
-  },
-  //começa aqui
-  sidebarContainer: {
+  input1: {
     width: "100%",
-    maxWidth: "300px",
-    fontFamily: "Arial, sans-serif",
+    padding: "8px 40px 8px 8px",
+    fontSize: 16,
+    borderRadius: 4,
+    border: "1px solid #ccc",
   },
-  card2: {
-    backgroundColor: "#fff",
-    borderRadius: "8px",
-    padding: "20px",
-    boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-    textAlign: "center",
-    position: "relative",
-    left: "610px",
-    top: "-210px",
+  input2: {
+    width: "100%",
+    padding: "8px 40px 8px 8px",
+    fontSize: 16,
+    borderRadius: 4,
+    border: "1px solid #ccc",
   },
-  avatarContainer: {
-    marginBottom: "16px",
-  },
-  avatar: {
-    width: "80px",
-    height: "80px",
-    borderRadius: "50%",
-    backgroundColor: "#2c3e50",
-    color: "#fff",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontSize: "28px",
-    fontWeight: "bold",
-    margin: "0 auto",
-  },
-  userName: {
-    fontSize: "18px",
-    fontWeight: "bold",
-    color: "#2c3e50",
-    marginBottom: "4px",
-  },
-  userRole: {
-    color: "#3498db",
-    fontSize: "14px",
-    fontWeight: "500",
-    marginBottom: "16px",
-  },
-  section: {
-    marginBottom: "16px",
-  },
-  sectionTitule: {
-    fontSize: "16px",
-    fontWeight: "600",
-    color: "#2c3e50",
-    marginBottom: "12px",
-    textAlign: "left",
-    position: "relative",
-    left: "100px",
-  },
-  sectionTitule2: {
-    fontSize: "16px",
-    fontWeight: "600",
-    color: "#2c3e50",
-    marginBottom: "12px",
-    textAlign: "left",
-    position: "relative",
-    left: "50px",
-  },
-  sectionTexto: {
-    fontSize: "14px",
-    color: "#7f8c8d",
-    textAlign: "left",
-    marginBottom: "6px",
-    position: "relative",
-    left: "55px",
-  },
-  sectionTexto2: {
-    fontSize: "14px",
-    color: "#7f8c8d",
-    textAlign: "left",
-    marginBottom: "6px",
-    position: "relative",
-    left: "50px",
-  },
-  statusBadge: {
-    display: "inline-block",
-    padding: "4px 12px",
-    backgroundColor: "#e6ffed",
-    color: "#2e7d32",
-    borderRadius: "12px",
-    fontSize: "14px",
-    fontWeight: "500",
-  },
-  actionsList: {
-    listStyle: "none",
-    padding: "0",
-    textAlign: "left",
-  },
-  actionItem: {
-    display: "flex",
-    alignItems: "center",
-    padding: "10px 0",
-    cursor: "pointer",
-    fontSize: "14px",
-    color: "#2c3e50",
-    borderBottom: "1px solid #f5f5f5",
-    transition: "color 0.2s",
-    ":hover": {
-      color: "#3498db",
-    },
-  },
-  actionIcon: {
-    width: "20px",
-    height: "20px",
-    marginRight: "10px",
+  input3: {
+    width: "100%",
+    padding: "8px 40px 8px 8px",
+    fontSize: 16,
+    borderRadius: 4,
+    border: "1px solid #ccc",
   },
   eyeButton: {
     position: "absolute",
-    right: "10px",
+    right: 8,
     top: "50%",
     transform: "translateY(-50%)",
-    background: "none",
+    background: "transparent",
     border: "none",
     cursor: "pointer",
-    color: "#7f8c8d",
+    color: "#555",
   },
   eyeButton2: {
-    right: "10px",
+    position: "absolute",
+    right: 8,
+    top: "50%",
     transform: "translateY(-50%)",
-    background: "none",
+    background: "transparent",
     border: "none",
     cursor: "pointer",
-    color: "#7f8c8d",
-    position:'relative',
-    left:'-30px',
-    top:'27px',
+    color: "#555",
   },
   eyeButton3: {
-    right: "10px",
+    position: "absolute",
+    right: 8,
+    top: "50%",
     transform: "translateY(-50%)",
-    background: "none",
+    background: "transparent",
     border: "none",
     cursor: "pointer",
-    color: "#7f8c8d",
-    position:'relative',
-    left:'340px',
-    top:'-43px',
+    color: "#555",
+  },
+  formActions: {
+    marginTop: 30,
+    display: "flex",
+    justifyContent: "flex-end",
+    gap: 15,
+  },
+  cancelButton: {
+    backgroundColor: "#ccc",
+    border: "none",
+    padding: "10px 20px",
+    borderRadius: 5,
+    cursor: "pointer",
+    fontWeight: "600",
+  },
+  submitButton: {
+    backgroundColor: "#007bff",
+    color: "#fff",
+    border: "none",
+    padding: "10px 20px",
+    borderRadius: 5,
+    cursor: "pointer",
+    fontWeight: "600",
+  },
+  userInfo: {
+    fontSize: 18,
+    lineHeight: 1.5,
+  },
+  sidebar: {
+    flex: 1,
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "flex-end",
+  },
+  logoutButton: {
+    backgroundColor: "#dc3545",
+    border: "none",
+    color: "#fff",
+    padding: "10px 20px",
+    borderRadius: 5,
+    cursor: "pointer",
+    fontWeight: "600",
+  },
+  labelnova: {
+    fontWeight: "600",
+    marginBottom: 6,
+  },
+  label1: {
+    fontWeight: "600",
+    marginBottom: 6,
   },
 };
 

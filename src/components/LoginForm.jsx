@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
-import { auth, provider, signInWithPopup } from "../firebase"; // <-- corrige aqui
+import { auth, provider, signInWithPopup } from "../firebase"; 
 import "./logincss.css";
 
 const LoginForm = () => {

@@ -1,25 +1,23 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
+import { auth, provider, signInWithPopup } from '../firebase';
 import './logincss.css';
-import { GoogleLogin } from '@react-oauth/google'; 
 
-//esta funcionando com o back
 const CriarContaForm = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [birthDate, setBirthDate] = useState('');
-  const [role, setRole] = useState('farmaceutico');
+  const [role, setRole] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [phone, setPhone] = useState(''); 
-  const [registrationId, setRegistrationId] = useState(''); 
+  const [phone, setPhone] = useState('');
+  const [registrationId, setRegistrationId] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState('success');
-  const [jwtToken, setJwtToken] = useState('');
 
   const navigate = useNavigate();
 
@@ -34,29 +32,20 @@ const CriarContaForm = () => {
     }
   };
 
-  const togglePasswordVisibility = () => {
-    setShowPassword(!showPassword);
-  };
-
-  const toggleConfirmPasswordVisibility = () => {
-    setShowConfirmPassword(!showConfirmPassword);
-  };
-
   const showToast = (message, type) => {
     setToastMessage(message);
     setToastType(type);
-    setTimeout(() => {
-      setToastMessage('');
-    }, 3000);
+    setTimeout(() => setToastMessage(''), 3000);
   };
+
+  const togglePasswordVisibility = () => setShowPassword(!showPassword);
+  const toggleConfirmPasswordVisibility = () => setShowConfirmPassword(!showConfirmPassword);
 
   const createUser = async (userData) => {
     try {
       const response = await fetch('http://localhost:5000/usuarios', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(userData),
       });
       return await response.json();
@@ -67,83 +56,89 @@ const CriarContaForm = () => {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+  e.preventDefault();
 
-    if (!name || !email || !birthDate || !phone || !registrationId || !password || password !== confirmPassword) {
-      showToast('Por favor, preencha todos os campos corretamente.', 'error');
+  if (!name || !email || !birthDate || !phone || !password || password !== confirmPassword) {
+    showToast('Preencha todos os campos corretamente.', 'error');
+    return;
+  }
+
+  if (password.length < 6) {
+    showToast('A senha deve ter pelo menos 6 caracteres.', 'error');
+    return;
+  }
+
+  setIsLoading(true);
+
+  try {
+    const emailExists = await checkEmailExists(email);
+    if (emailExists) {
+      showToast('Este email já está cadastrado.', 'error');
+      setIsLoading(false);
       return;
     }
 
-    if (password.length < 6) {
-      showToast('A senha deve ter pelo menos 6 caracteres.', 'error');
-      return;
-    }
+    const finalRole = registrationId.trim() === "" ? "administrador" : "farmaceutico";
 
+    const newUser = {
+      name,
+      email,
+      birthDate,
+      role: finalRole,
+      phone,
+      registrationId: registrationId.trim(),
+      password,
+      createdAt: new Date().toISOString(),
+    };
+
+    await createUser(newUser);
+    showToast('Conta criada com sucesso! Redirecionando...', 'success');
+    setTimeout(() => navigate('/login'), 2000);
+  } catch (error) {
+    showToast('Erro ao criar conta.', 'error');
+  } finally {
+    setIsLoading(false);
+  }
+};
+
+
+  const handleGoogleSignup = async () => {
     setIsLoading(true);
-
     try {
-      const emailExists = await checkEmailExists(email);
-      if (emailExists) {
-        showToast('Este email já está cadastrado.', 'error');
-        setIsLoading(false);
-        return;
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+      const idToken = await user.getIdToken();
+
+      const res = await fetch('http://localhost:5000/auth/firebase', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ idToken }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.token) {
+        localStorage.setItem('userData', JSON.stringify({
+          id: data.user.id,
+          name: data.user.name,
+          email: data.user.email,
+          role: data.user.role,
+          token: data.token,
+        }));
+        showToast('Conta criada com Google!', 'success');
+        navigate('/cadastropaciente');
+      } else {
+        throw new Error(data.mensagem || 'Erro ao criar conta via Google');
       }
-
-      const newUser = {
-        name,
-        email,
-        birthDate,
-        role,
-        phone,
-        registrationId,
-        password,
-        createdAt: new Date().toISOString(),
-      };
-
-      await createUser(newUser);
-      
-      showToast('Conta criada com sucesso! Redirecionando para login...', 'success');
-      
-      // Redireciona para a tela de login após 2 segundos
-      setTimeout(() => {
-        navigate('/login');
-      }, 2000);
-      
     } catch (error) {
-      showToast('Erro ao criar conta. Tente novamente.', 'error');
-      console.error('Erro no cadastro:', error);
+      console.error('Erro com Firebase:', error);
+      showToast(error.message, 'error');
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Função de login com Google
-  const handleGoogleLoginSuccess = async (response) => {
-    const googleToken = response.credential;  // O token do Google
-    try {
-      // Enviar o token do Google para a API para obter um JWT
-      const res = await fetch('http://localhost:5000/auth/google/callback', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${googleToken}`,
-        },
-      });
-
-      const data = await res.json();
-      if (data.token) {
-        setJwtToken(data.token);  // Armazenar JWT na variável de estado
-        navigate('/cadastropaciente');  // Redirecionando para a página protegida
-      }
-    } catch (error) {
-      console.error('Erro no login com Google:', error);
-    }
-  };
-
-  const handleGoogleLoginError = (error) => {
-    console.error('Erro no login com Google:', error);
-  };
-  
-  
   return (
     <div style={styles.authContainer}>
       <div style={styles.authLeft}>
@@ -151,105 +146,52 @@ const CriarContaForm = () => {
         <h1 style={styles.h1}>PharmaSys</h1>
         <p style={styles.p}>Sistema de Gestão Farmacêutica</p>
       </div>
-      
+
       <div style={styles.authRight}>
         <div style={styles.authContent}>
           <h2 style={styles.h2}>Crie sua Conta</h2>
           <p style={styles.subtitle}>Preencha os dados abaixo para se registrar</p>
 
           {toastMessage && (
-            <div style={{ 
-              ...styles.toast, 
-              backgroundColor: toastType === 'success' ? '#d4edda' : '#f8d7da', 
-              color: toastType === 'success' ? '#155724' : '#721c24' 
+            <div style={{
+              ...styles.toast,
+              backgroundColor: toastType === 'success' ? '#d4edda' : '#f8d7da',
+              color: toastType === 'success' ? '#155724' : '#721c24'
             }}>
               {toastMessage}
             </div>
           )}
 
           <form onSubmit={handleSubmit} style={styles.form}>
-            {/* Campo para Nome */}
             <div style={styles.formGroup}>
-              <label htmlFor="name" style={styles.label1}>Nome completo</label>
-              <input
-                id="name"
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Digite seu nome completo"
-                disabled={isLoading}
-                style={styles.input1}
-              />
+              <label style={styles.label1}>Nome completo</label>
+              <input type="text" value={name} onChange={(e) => setName(e.target.value)} style={styles.input1} disabled={isLoading} />
             </div>
 
-            {/* Campo para Email */}
             <div style={styles.formGroup}>
-              <label htmlFor="email" style={styles.label2}>Email</label>
-              <input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="digite seu email"
-                disabled={isLoading}
-                style={styles.input2}
-              />
+              <label style={styles.label2}>Email</label>
+              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} style={styles.input2} disabled={isLoading} />
             </div>
 
-            {/* Campo para Data de Nascimento */}
             <div style={styles.formGroup}>
-              <label htmlFor="birthDate" style={styles.labelBirthDate}>Data de Nascimento</label>
-              <input
-                id="birthDate"
-                type="date"
-                value={birthDate}
-                onChange={(e) => setBirthDate(e.target.value)}
-                disabled={isLoading}
-                style={styles.inputBirthDate}
-              />
+              <label style={styles.labelBirthDate}>Data de Nascimento</label>
+              <input type="date" value={birthDate} onChange={(e) => setBirthDate(e.target.value)} style={styles.inputBirthDate} disabled={isLoading} />
             </div>
 
-            {/* Novo campo para Telefone */}
             <div style={styles.formGroup}>
-              <label htmlFor="phone" style={styles.label3}>Número de Telefone</label>
-              <input
-                id="phone"
-                type="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="Digite seu telefone"
-                disabled={isLoading}
-                style={styles.input3}
-              />
+              <label style={styles.label3}>Telefone</label>
+              <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} style={styles.input3} disabled={isLoading} />
             </div>
 
-            {/* Novo campo para Registro Profissional */}
             <div style={styles.formGroup}>
-              <label htmlFor="registrationId" style={styles.labelRegistration}>Registro Profissional</label>
-              <input
-                id="registrationId"
-                type="text"
-                value={registrationId}
-                onChange={(e) => setRegistrationId(e.target.value)}
-                placeholder="registro profissional"
-                disabled={isLoading}
-                style={styles.inputRegistration}
-              />
+              <label style={styles.labelRegistration}>Registro Profissional</label>
+              <input type="text" value={registrationId} onChange={(e) => setRegistrationId(e.target.value)} style={styles.inputRegistration} disabled={isLoading} />
             </div>
 
-            {/* Campos para Senha */}
             <div style={styles.formGroup}>
-              <label htmlFor="password" style={styles.label4}>Senha</label>
+              <label style={styles.label4}>Senha</label>
               <div style={styles.passwordContainer}>
-                <input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Digite a senha"
-                  disabled={isLoading}
-                  style={styles.input4}
-                />
+                <input type={showPassword ? 'text' : 'password'} value={password} onChange={(e) => setPassword(e.target.value)} style={styles.input4} disabled={isLoading} />
                 <span style={styles.eyeIcon} onClick={togglePasswordVisibility}>
                   {showPassword ? <FaEyeSlash /> : <FaEye />}
                 </span>
@@ -257,51 +199,26 @@ const CriarContaForm = () => {
             </div>
 
             <div style={styles.formGroup}>
-              <label htmlFor="confirmPassword" style={styles.label5}>Confirmar Senha</label>
+              <label style={styles.label5}>Confirmar Senha</label>
               <div style={styles.passwordContainer}>
-                <input
-                  id="confirmPassword"
-                  type={showConfirmPassword ? "text" : "password"}
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Confirme a senha"
-                  disabled={isLoading}
-                  style={styles.input5}
-                />
+                <input type={showConfirmPassword ? 'text' : 'password'} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} style={styles.input5} disabled={isLoading} />
                 <span style={styles.eyeIcontwo} onClick={toggleConfirmPasswordVisibility}>
                   {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
                 </span>
               </div>
             </div>
 
-            <button type="submit" disabled={isLoading} style={styles.button}>
-              {isLoading ? (
-                <span style={styles.spinner}>
-                  <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Criando...
-                </span>
-              ) : (
-                'Criar Conta'
-              )}
+            <button type="submit" style={styles.button} disabled={isLoading}>
+              {isLoading ? 'Criando...' : 'Criar Conta'}
             </button>
           </form>
-            
-          <div style={styles.googleWrapper}>
-            <div style={styles.googleInnerWrapper}>  
-              <GoogleLogin
-                onSuccess={handleGoogleLoginSuccess}
-                onError={handleGoogleLoginError}
-                useOneTap
-                shape="pill"
-                theme="outline"
-                size="large"
-              />
-            </div>
-          </div>
 
+          <div style={styles.googleWrapper}>
+            <button onClick={handleGoogleSignup} style={styles.googleButton} disabled={isLoading}>
+              {/* <img src="images/google-icon.png" alt="Google" style={{ width: 18, marginRight: 10 }} /> */}
+              Criar conta com Google
+            </button>
+          </div>
 
           <p style={styles.registerLink}>
             Já tem uma conta? <Link to="/login" style={styles.link}>Faça login</Link>
