@@ -9,6 +9,11 @@ const HeaderLoggedIn = ({ onLogout }) => {
   const [showModal, setShowModal] = useState(false);
   const navigate = useNavigate();
 
+  const userDataString = localStorage.getItem('userData');
+  const userData = userDataString ? JSON.parse(userDataString) : null;
+  const role = userData?.user?.role;
+  const name = userData?.user?.name;
+
   const handleMouseEnter = () => setHovered(true);
   const handleMouseLeave = () => setHovered(false);
   const handleMouseClick = () => setClicked(true);
@@ -31,6 +36,7 @@ const HeaderLoggedIn = ({ onLogout }) => {
         <Navbar.Toggle aria-controls="basic-navbar-nav" />
         <Navbar.Collapse id="basic-navbar-nav">
           <Nav className="ml-auto">
+
             <Nav.Link
               as={Link}
               to="/lotes"
@@ -41,6 +47,7 @@ const HeaderLoggedIn = ({ onLogout }) => {
             >
               Lotes Recebidos
             </Nav.Link>
+
             <Nav.Link
               as={Link}
               to="/historicomedicamentos"
@@ -51,6 +58,7 @@ const HeaderLoggedIn = ({ onLogout }) => {
             >
               Histórico de Medicamentos
             </Nav.Link>
+
             <Nav.Link
               as={Link}
               to="/cadastropaciente"
@@ -61,6 +69,7 @@ const HeaderLoggedIn = ({ onLogout }) => {
             >
               Cadastro de Paciente
             </Nav.Link>
+
             <Nav.Link
               as={Link}
               to="/dispensacao"
@@ -71,6 +80,7 @@ const HeaderLoggedIn = ({ onLogout }) => {
             >
               Dispensação
             </Nav.Link>
+
             <Nav.Link
               as={Link}
               to="/cadastrarlotes"
@@ -81,6 +91,21 @@ const HeaderLoggedIn = ({ onLogout }) => {
             >
               Cadastrar Medicamentos
             </Nav.Link>
+
+            {/* ✅ Só aparece para ADMINISTRADOR */}
+            {role === 'administrador' && (
+              <Nav.Link
+                as={Link}
+                to="/cadastrarusuario"
+                style={{ ...linkStyle, ...(hovered || clicked ? { color: '#78C2FF' } : {}) }}
+                onMouseEnter={handleMouseEnter}
+                onMouseLeave={handleMouseLeave}
+                onClick={handleMouseClick}
+              >
+                Cadastrar Usuários
+              </Nav.Link>
+            )}
+
             <Nav.Link
               as={Link}
               to="/profile"
@@ -92,7 +117,11 @@ const HeaderLoggedIn = ({ onLogout }) => {
               Perfil
             </Nav.Link>
 
-            <Button variant="link" onClick={handleShowModal} style={linkStyle}>
+            {/* <span style={{ color: '#fff', fontWeight: '600', position: 'relative', left: '150px', marginRight: '20px' }}>
+              {name && `👤 ${name}`}
+            </span> */}
+
+            <Button variant="link" onClick={handleShowModal} style={{ ...linkStyle, marginLeft: '10px' }}>
               Sair
             </Button>
           </Nav>
@@ -123,9 +152,9 @@ const HeaderLoggedIn = ({ onLogout }) => {
 
 export default HeaderLoggedIn;
 
-// Constantes de CSS
+// 🔒 Estilos exatamente como você pediu:
 const navbarStyle = {
-  backgroundColor: '#000', // Cor de fundo preta
+  backgroundColor: '#000', 
 };
 
 const linkStyle = {
@@ -133,8 +162,8 @@ const linkStyle = {
   fontWeight: '600',
   fontSize: '16px',
   position: 'relative',
-  left:'150px',
-  marginRight: '30px', // Reduziu o espaço à direita
+  left: '150px',
+  marginRight: '20px',
   display: 'inline-block',
 };
 

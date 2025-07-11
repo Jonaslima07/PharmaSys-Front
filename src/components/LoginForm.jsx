@@ -24,23 +24,24 @@ const LoginForm = () => {
   };
 
   const handleLogin = async (email, password) => {
-    // eslint-disable-next-line no-useless-catch
-    try {
-      const response = await fetch("http://localhost:5000/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
+    const response = await fetch("http://localhost:5000/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.mensagem || "Erro ao fazer login");
-      }
+    const data = await response.json();
 
-      return await response.json();
-    } catch (error) {
-      throw error;
+    if (!response.ok) {
+      throw new Error(data.mensagem || "Erro ao fazer login");
     }
+
+    // Verifica se email está confirmado no login manual
+    if (!data.user.emailConfirmed) {
+      throw new Error("Email não confirmado. Por favor, confirme seu email antes de entrar.");
+    }
+
+    return data;
   };
 
   const handleSubmit = async (e) => {
@@ -55,7 +56,7 @@ const LoginForm = () => {
 
     try {
       const data = await handleLogin(email, password);
-      localStorage.setItem("userData", JSON.stringify({ ...data.user, token: data.token }));
+      localStorage.setItem("userData", JSON.stringify({ token: data.token, user: data.user }));
       showToast("Login realizado com sucesso!", "success");
       setTimeout(() => navigate("/cadastropaciente"), 1500);
     } catch (error) {
@@ -72,8 +73,6 @@ const LoginForm = () => {
       const user = result.user;
       const idToken = await user.getIdToken();
 
-      console.log("Firebase ID Token:", idToken);
-
       const res = await fetch("http://localhost:5000/auth/firebase", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -86,16 +85,22 @@ const LoginForm = () => {
         throw new Error(data.mensagem || "Erro ao validar token Firebase");
       }
 
-      localStorage.setItem("userData", JSON.stringify({
-        id: data.user.id,
-        name: data.user.name,
-        email: data.user.email,
-        role: data.user.role,
-        token: data.token,
-      }));
+      if (!data.user.emailConfirmed) {
+        showToast("Email não confirmado. Por favor, confirme seu email.", "error");
+        setIsLoading(false);
+        return;
+      }
 
+      localStorage.setItem("userData", JSON.stringify({ token: data.token, user: data.user }));
       showToast("Login via Google realizado com sucesso!", "success");
-      setTimeout(() => navigate("/cadastrarlotes"), 1500);
+
+      setTimeout(() => {
+        if (!data.user.cadastroCompleto) {
+          navigate("/completarcadastro");
+        } else {
+          navigate("/cadastrarlotes");
+        }
+      }, 1500);
     } catch (error) {
       console.error("Erro no login com Firebase:", error);
       showToast(error.message, "error");
@@ -118,11 +123,13 @@ const LoginForm = () => {
           <p style={styles.subtitle}>Acesse sua conta para continuar</p>
 
           {toastMessage && (
-            <div style={{
-              ...styles.toast,
-              backgroundColor: toastType === "success" ? "#d4edda" : "#f8d7da",
-              color: toastType === "success" ? "#155724" : "#721c24",
-            }}>
+            <div
+              style={{
+                ...styles.toast,
+                backgroundColor: toastType === "success" ? "#d4edda" : "#f8d7da",
+                color: toastType === "success" ? "#155724" : "#721c24",
+              }}
+            >
               {toastMessage}
             </div>
           )}
@@ -192,6 +199,8 @@ const LoginForm = () => {
     </div>
   );
 };
+
+
 const styles = {
   authContainer: {
     display: "flex",
@@ -199,7 +208,6 @@ const styles = {
     backgroundColor: "white",
     width: "1500px",
   },
-
   googleWrapper: {
     position: "relative",
     width: "422px",
@@ -208,16 +216,9 @@ const styles = {
     marginTop: "70px",
     display: "flex",
     justifyContent: "center",
-    backgroundColor: "transparent", // garante que o fundo não interfira
-    zIndex: 1, // garante que fique acima de outros elementos se necessário
+    backgroundColor: "transparent",
+    zIndex: 1,
   },
-  googleInnerWrapper: {
-    transform: "scale(0.9)",
-    width: "100%",
-    display: "flex",
-    justifyContent: "center",
-  },
-
   authLeft: {
     flex: 1,
     backgroundColor: "#001f3d",
@@ -356,18 +357,12 @@ const styles = {
     position: "relative",
     top: "-35px",
   },
-  spinner: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: "8px",
-  },
   passwordContainer: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: "0.5rem",
-  }, //color: '#78C2FF',
+  },
   forgotPasswordLink: {
     fontSize: "12px",
     color: "#007bff",
@@ -401,7 +396,6 @@ const styles = {
     position: "relative",
     top: "-42px",
   },
-
   registerLink: {
     textAlign: "center",
     fontSize: "14px",
@@ -412,7 +406,6 @@ const styles = {
     top: "-205px",
   },
   link: {
-    //color: '#001f3d',
     textDecoration: "none",
     fontWeight: "500",
     color: "#78C2FF",

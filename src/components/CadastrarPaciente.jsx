@@ -3,15 +3,7 @@ import { Button, Modal, Form, Alert } from "react-bootstrap";
 import { useNavigate, useParams } from "react-router-dom";
 import PesquisaPaciente from "./PesquisaPaciente";
 import { ToastContainer, toast } from "react-toastify";
-import {
-  Edit2,
-  Trash2,
-  User,
-  CreditCard,
-  FileText,
-  Phone,
-  MapPin,
-} from "lucide-react";
+import { Edit2, Trash2, User, CreditCard, FileText, Phone, MapPin } from "lucide-react";
 
 const CadastrarPaciente = () => {
   const [pacientes, setPacientes] = useState([]);
@@ -21,8 +13,6 @@ const CadastrarPaciente = () => {
     nome: "",
     cartao_sus: "",
     rg: "",
-    // medicamento: "",
-    // quantidade: "",
     cpf: "",
     telefone: "",
     endereco: "",
@@ -31,8 +21,6 @@ const CadastrarPaciente = () => {
     nome: false,
     cartao_sus: false,
     rg: false,
-    // medicamento: false,
-    // quantidade: false,
     cpf: false,
     telefone: false,
     endereco: false,
@@ -42,17 +30,18 @@ const CadastrarPaciente = () => {
   const pacienteRefs = useRef({});
   const navigate = useNavigate();
   const { id } = useParams();
+  const [originalPaciente, setOriginalPaciente] = useState(null);
 
-  // Função para pegar token do localStorage
+
   const getToken = () => {
     const userDataString = localStorage.getItem("userData");
-    if (!userDataString) return null;
-    try {
-      const userData = JSON.parse(userDataString);
-      return userData.token || null;
-    } catch {
-      return null;
+    if (userDataString) {
+      try {
+        const userData = JSON.parse(userDataString);
+        if (userData.token) return userData.token;
+      } catch { /* empty */ }
     }
+    return localStorage.getItem("token") || null;
   };
 
   useEffect(() => {
@@ -68,65 +57,59 @@ const CadastrarPaciente = () => {
     })();
   }, [id]);
 
-  async function loadPacientes() {
-  const token = getToken();
-  if (!token) {
-    console.error("Token JWT não encontrado no localStorage");
-    navigate("/login"); // redireciona
-    return;
-  }
-
-  const response = await fetch("http://localhost:5000/pacientes", {
-    method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    if (response.status === 401 && errorText.includes("expired")) {
-      // Token expirado: limpar localStorage e redirecionar
-      localStorage.removeItem("userData");
-      alert("Sua sessão expirou. Faça login novamente.");
+  const loadPacientes = async () => {
+    const token = getToken();
+    if (!token) {
       navigate("/login");
       return;
     }
 
-    throw new Error(
-      `Erro ao buscar pacientes. Status: ${response.status}. Mensagem: ${errorText}`
-    );
-  }
-
-  const data = await response.json();
-  setPacientes(data);
-  setFilteredPacientes(data);
-}
-
-  const loadPaciente = async (id) => {
-    const token = getToken();
-    if (!token) {
-      alert("Token JWT não encontrado");
-      return;
-    }
-
-    const response = await fetch(`http://localhost:5000/pacientes/${id}`, {
+    const response = await fetch("http://localhost:5000/pacientes", {
       headers: {
+        "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
     });
 
     if (!response.ok) {
-      alert("Erro ao carregar o paciente");
-      return;
+      const errorText = await response.text();
+      if (response.status === 401 && errorText.includes("expired")) {
+        localStorage.removeItem("userData");
+        alert("Sua sessão expirou. Faça login novamente.");
+        navigate("/login");
+        return;
+      }
+      throw new Error(`Erro ao buscar pacientes: ${errorText}`);
     }
 
     const data = await response.json();
-    setFormData(data);
-    setEditMode(true);
-    setModalVisible(true);
+    setPacientes(data);
+    setFilteredPacientes(data);
   };
+
+  const loadPaciente = async (id) => {
+  const token = getToken();
+  if (!token) {
+    alert("Token JWT não encontrado");
+    return;
+  }
+
+  const response = await fetch(`http://localhost:5000/pacientes/${id}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (!response.ok) {
+    alert("Erro ao carregar o paciente");
+    return;
+  }
+
+  const data = await response.json();
+  setFormData(data);
+  setEditMode(true);  // ✅ aqui também precisa garantir que editMode está true
+  setOriginalPaciente(data);
+  setModalVisible(true);
+};
+
 
   const savePaciente = async (paciente) => {
     const token = getToken();
@@ -135,17 +118,20 @@ const CadastrarPaciente = () => {
       return;
     }
 
+    const pacienteData = extractPacienteData(paciente);
+
     const response = await fetch("http://localhost:5000/pacientes", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify(paciente),
+      body: JSON.stringify(pacienteData),
     });
 
     if (!response.ok) {
       const errorData = await response.json();
+      toast.error(errorData.erro || "Erro ao cadastrar paciente");
       throw new Error(errorData.erro || "Erro ao cadastrar paciente");
     }
 
@@ -154,39 +140,66 @@ const CadastrarPaciente = () => {
     resetForm();
   };
 
-  const editPaciente = async (paciente) => {
-    const token = getToken();
-    if (!token) {
-      alert("Token JWT não encontrado");
-      return;
+ const editPaciente = async (paciente) => {
+  const token = getToken();
+  if (!token) {
+    alert("Token JWT não encontrado");
+    return;
+  }
+
+  const pacienteData = getChangedFields();  // Só campos alterados
+
+  if (Object.keys(pacienteData).length === 0) {
+    toast.info("Nenhuma alteração detectada.");
+    return;
+  }
+
+  const response = await fetch(`http://localhost:5000/pacientes/${paciente.id}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(pacienteData),
+  });
+
+  const result = await response.json();
+
+  if (!response.ok) {
+    console.error("Erro:", result);
+    toast.error(result.erro || "Erro ao editar paciente");
+    throw new Error(result.erro || "Erro ao editar paciente");
+  }
+
+  toast.success("Paciente editado com sucesso!");
+  await loadPacientes();
+  resetForm();
+};
+
+  const getChangedFields = () => {
+  if (!originalPaciente) return formData; // sem original, envia tudo (novo cadastro)
+
+  const changed = {};
+  for (const key in formData) {
+    if (formData[key] !== originalPaciente[key]) {
+      changed[key] = formData[key];
     }
-    const response = await fetch(`http://localhost:5000/pacientes/${paciente.id}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`
-      },
-      body: JSON.stringify(paciente)
-    });
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.erro || "Erro ao editar paciente");
-    }
-    toast.success("Paciente editado com sucesso!");
-    await loadPacientes();
-    resetForm();
-  };
+  }
+  return changed;
+};
+
+
+  const extractPacienteData = (paciente) => ({
+    nome: paciente.nome,
+    cartao_sus: paciente.cartao_sus,
+    rg: paciente.rg,
+    cpf: paciente.cpf,
+    telefone: paciente.telefone,
+    endereco: paciente.endereco,
+  });
 
   const deletePaciente = async (id) => {
-    if (!id || id <= 0) {
-      alert("ID inválido. Não é possível excluir este paciente.");
-      return;
-    }
-
-    if (!window.confirm("Tem certeza que deseja excluir este paciente?")) {
-      return;
-    }
-
+    if (!id || id <= 0 || !window.confirm("Tem certeza?")) return;
     const token = getToken();
     if (!token) {
       alert("Token JWT não encontrado");
@@ -195,9 +208,7 @@ const CadastrarPaciente = () => {
 
     const response = await fetch(`http://localhost:5000/pacientes/${id}`, {
       method: "DELETE",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
+      headers: { Authorization: `Bearer ${token}` },
     });
 
     if (!response.ok) {
@@ -212,95 +223,69 @@ const CadastrarPaciente = () => {
 
   const handleInputChange = (name, value) => {
     let processedValue = value;
-
-    if (name === "cpf") {
-      processedValue = value.replace(/\D/g, "").slice(0, 11);
-    }
-
+    if (name === "cpf") processedValue = value.replace(/\D/g, "").slice(0, 11);
     setFormData({ ...formData, [name]: processedValue });
   };
 
   const handleAddPaciente = async () => {
-    const errors = {
-      nome: !formData.nome,
-      cartao_sus: !/^\d{15}$/.test(formData.cartao_sus),
-      rg: !/^\d{10}$/.test(formData.rg),
-      // medicamento: !formData.medicamento,
-      // quantidade: !(parseInt(formData.quantidade) > 0),
-      cpf: !/^\d{11}$/.test(formData.cpf),
-      telefone: !/^\d{10,11}$/.test(formData.telefone),
-      endereco: !formData.endereco,
-    };
-
-    setFormErrors(errors);
-
-    if (Object.values(errors).includes(true)) {
-      alert("Por favor, preencha todos os campos corretamente!");
-      return;
-    }
-
-    try {
-      if (editMode) {
-        await editPaciente(formData);
-      } else {
-        await savePaciente(formData);
-      }
-    } catch (error) {
-      alert(error.message);
-    }
+  const errors = {
+    nome: !formData.nome,
+    cartao_sus: !/^\d{15}$/.test(formData.cartao_sus),
+    rg: !/^\d{10}$/.test(formData.rg),
+    cpf: !/^\d{11}$/.test(formData.cpf),
+    telefone: !/^\d{10,11}$/.test(formData.telefone),
+    endereco: !formData.endereco,
   };
 
+  setFormErrors(errors);
+
+  if (Object.values(errors).includes(true)) {
+    alert("Por favor, preencha todos os campos corretamente!");
+    return;
+  }
+
+  try {
+    // Decisão segura: se tem ID -> editar (PUT), se não tem -> criar (POST)
+    if (formData.id) {
+      await editPaciente(formData);  // PUT
+    } else {
+      await savePaciente(formData);  // POST
+    }
+  } catch (error) {
+    console.error(error.message);
+    toast.error(error.message);
+    alert(error.message);
+  }
+};
+
+
   const resetForm = () => {
-    setFormData({
-      id: null,
-      nome: "",
-      cartao_sus: "",
-      rg: "",
-      // medicamento: "",
-      // quantidade: "",
-      cpf: "",
-      telefone: "",
-      endereco: "",
-    });
+    setFormData({ id: null, nome: "", cartao_sus: "", rg: "", cpf: "", telefone: "", endereco: "" });
     setModalVisible(false);
     setEditMode(false);
-    setFormErrors({
-      nome: false,
-      cartao_sus: false,
-      rg: false,
-      // medicamento: false,
-      // quantidade: false,
-      cpf: false,
-      telefone: false,
-      endereco: false,
-    });
+    setFormErrors({ nome: false, cartao_sus: false, rg: false, cpf: false, telefone: false, endereco: false });
   };
 
   const openModal = (paciente) => {
-    if (paciente) {
-      setFormData(paciente);
-      setEditMode(true);
-    } else {
-      resetForm();
-    }
-    setModalVisible(true);
-  };
+  if (paciente) {
+    setFormData(paciente);
+    setEditMode(true);
+  } else {
+    resetForm();  // Isso já garante editMode false e limpa os dados
+  }
+  setModalVisible(true);
+};
 
   const handleSelectPaciente = (paciente) => {
     setFormData(paciente);
     if (pacienteRefs.current[paciente.id]) {
-      pacienteRefs.current[paciente.id].scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      });
+      pacienteRefs.current[paciente.id].scrollIntoView({ behavior: "smooth", block: "start" });
     }
   };
 
-
   const handleSearch = (searchTerm) => {
     const filtered = pacientes.filter(
-      (paciente) =>
-        paciente.cpf.includes(searchTerm) || paciente.rg.includes(searchTerm)
+      (paciente) => paciente.cpf.includes(searchTerm) || paciente.rg.includes(searchTerm)
     );
     setFilteredPacientes(filtered);
   };

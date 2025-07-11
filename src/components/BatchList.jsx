@@ -11,20 +11,60 @@ const BatchList = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
+ const getToken = () => {
+  const userData = JSON.parse(localStorage.getItem("userData"));
+  const token = userData?.token;
+  console.log("Token do localStorage:", token);
+  return token;
+};
+
+
   useEffect(() => {
     loadBatches();
   }, []);
 
   const loadBatches = async () => {
-    setIsLoading(true);
-    setError(null);
+  setIsLoading(true);
+  setError(null);
+
+  const userData = JSON.parse(localStorage.getItem("userData"));
+  const token = userData?.token;
+
+  if (!token) {
+    alert("Token JWT não encontrado. Faça login novamente.");
+    window.location.href = "/login";
+    return;
+  }
+
+  // resto do código...
+
+
+
     try {
-      const response = await fetch('http://localhost:5000/lotes');
+      const response = await fetch('http://localhost:5000/lotes', {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
       if (!response.ok) {
-        throw new Error(`Erro HTTP! status: ${response.status}`);
+        const errorText = await response.text();
+
+        if (response.status === 401 && errorText.includes("expired")) {
+          localStorage.removeItem("userData");
+          localStorage.removeItem("token");
+          alert("Sua sessão expirou. Faça login novamente.");
+          window.location.href = "/login";
+          return;
+        }
+
+        throw new Error(`Erro HTTP! status: ${response.status} - ${errorText}`);
       }
+
       const data = await response.json();
-      
+
       // Filtra apenas lotes ativos (quantity > 0)
       const activeBatches = data.filter(batch => batch.quantity > 0);
       setBatches(activeBatches);
@@ -53,37 +93,57 @@ const BatchList = () => {
   };
 
   const handleFormSubmit = async (batchData) => {
+    setIsLoading(true);
+
+    const token = getToken();
+    if (!token) {
+      alert("Token JWT não encontrado. Faça login novamente.");
+      window.location.href = "/login";
+      return;
+    }
+
     try {
-      setIsLoading(true);
-      
       // Ajusta as datas para evitar problemas de timezone
       const adjustedBatchData = {
         ...batchData,
-        expirationDate: batchData.expirationDate ? 
-          new Date(batchData.expirationDate).toISOString().split('T')[0] : null,
-        manufacturingDate: batchData.manufacturingDate ? 
-          new Date(batchData.manufacturingDate).toISOString().split('T')[0] : null,
-        medicationImage: batchData.medicationImage?.startsWith('data:image') 
-          ? batchData.medicationImage 
+        expirationDate: batchData.expirationDate
+          ? new Date(batchData.expirationDate).toISOString().split('T')[0]
+          : null,
+        manufacturingDate: batchData.manufacturingDate
+          ? new Date(batchData.manufacturingDate).toISOString().split('T')[0]
+          : null,
+        medicationImage: batchData.medicationImage?.startsWith('data:image')
+          ? batchData.medicationImage
           : `data:image/jpeg;base64,${batchData.medicationImage}`
       };
 
       const url = batchData.id
         ? `http://localhost:5000/lotes/${batchData.id}`
         : 'http://localhost:5000/lotes';
-      
+
       const method = batchData.id ? 'PUT' : 'POST';
 
       const response = await fetch(url, {
         method,
         headers: {
           'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(adjustedBatchData),
       });
 
       if (!response.ok) {
-        throw new Error(`Erro HTTP! status: ${response.status}`);
+        const errorText = await response.text();
+
+        if (response.status === 401 && errorText.includes("expired")) {
+          localStorage.removeItem("userData");
+          localStorage.removeItem("token");
+          alert("Sua sessão expirou. Faça login novamente.");
+          window.location.href = "/login";
+          return;
+        }
+
+        throw new Error(`Erro HTTP! status: ${response.status} - ${errorText}`);
       }
 
       handleFormClose();
@@ -97,25 +157,45 @@ const BatchList = () => {
 
   const filteredBatches = batches.filter(batch => {
     if (!batch) return false;
-    
+
     const search = searchTerm.toLowerCase();
     return (
       (batch.number || '').toLowerCase().includes(search) ||
       (batch.manufacturer || '').toLowerCase().includes(search) ||
       (batch.medicationName || '').toLowerCase().includes(search) ||
-      (batch.lotNumber || '').toLowerCase().includes(search)  // Adicionando filtro para o Lote de Compra
+      (batch.lotNumber || '').toLowerCase().includes(search)
     );
   });
 
   const handleDelete = async (id) => {
     if (window.confirm('Tem certeza que deseja excluir este lote permanentemente?')) {
+      const token = getToken();
+      if (!token) {
+        alert("Token JWT não encontrado. Faça login novamente.");
+        window.location.href = "/login";
+        return;
+      }
+
       try {
         const response = await fetch(`http://localhost:5000/lotes/${id}`, {
           method: 'DELETE',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         });
 
         if (!response.ok) {
-          throw new Error(`Erro HTTP! status: ${response.status}`);
+          const errorText = await response.text();
+
+          if (response.status === 401 && errorText.includes("expired")) {
+            localStorage.removeItem("userData");
+            localStorage.removeItem("token");
+            alert("Sua sessão expirou. Faça login novamente.");
+            window.location.href = "/login";
+            return;
+          }
+
+          throw new Error(`Erro HTTP! status: ${response.status} - ${errorText}`);
         }
 
         loadBatches();
@@ -140,7 +220,7 @@ const BatchList = () => {
 
   const calculateStatus = (expirationDate) => {
     if (!expirationDate) return 'A vencer';
-    
+
     try {
       const today = new Date();
       const expDate = new Date(expirationDate);
@@ -151,8 +231,8 @@ const BatchList = () => {
   };
 
   const getStatusStyle = (status) => {
-    return status === 'Vencido' 
-      ? { backgroundColor: '#f12f11', color: 'white' } 
+    return status === 'Vencido'
+      ? { backgroundColor: '#f12f11', color: 'white' }
       : { backgroundColor: '#78C2FF', color: 'black' };
   };
 
@@ -183,7 +263,7 @@ const BatchList = () => {
 
       <div className="batch-content">
         <h2>Medicamentos Cadastrados</h2>
-        
+
         <div className="batch-actions">
           <input
             type="text"
@@ -198,10 +278,10 @@ const BatchList = () => {
         </div>
 
         {showForm && (
-          <BatchForm 
-            batch={selectedBatch} 
-            onClose={handleFormClose} 
-            onSubmit={handleFormSubmit}
+          <BatchForm
+            batch={selectedBatch}
+            onClose={handleFormClose}
+            onSave={handleFormClose} // como no BatchForm o onSave chama loadBatches, aqui reutilizo handleFormClose
             isSubmitting={isLoading}
           />
         )}
@@ -220,7 +300,7 @@ const BatchList = () => {
                 <tr>
                   <th>Imagem</th>
                   <th>Lote de Farmácia</th>
-                  <th>Lote de Compra</th> {/* Nova coluna para o Lote compra */}
+                  <th>Lote de Compra</th>
                   <th>Medicamento</th>
                   <th>Fabricante</th>
                   <th>Validade</th>
@@ -238,9 +318,9 @@ const BatchList = () => {
                     <tr key={batch.id}>
                       <td className="image-cell">
                         {batch.medicationImage ? (
-                          <img 
-                            src={batch.medicationImage.startsWith('data:image') 
-                              ? batch.medicationImage 
+                          <img
+                            src={batch.medicationImage.startsWith('data:image')
+                              ? batch.medicationImage
                               : `data:image/jpeg;base64,${batch.medicationImage}`}
                             alt={batch.medicationName || 'Medicamento'}
                             className="batch-image"
@@ -254,7 +334,7 @@ const BatchList = () => {
                         )}
                       </td>
                       <td>{batch.number || '-'}</td>
-                      <td>{batch.lotNumber || '-'}</td> {/* Exibe o Lote de Fabricante */}
+                      <td>{batch.lotNumber || '-'}</td>
                       <td>{batch.medicationName || '-'}</td>
                       <td>{batch.manufacturer || '-'}</td>
                       <td>{formatDate(batch.expirationDate)}</td>
@@ -267,7 +347,7 @@ const BatchList = () => {
                       </td>
                       <td>{formatDate(batch.manufacturingDate)}</td>
                       <td className="actions-cell">
-                        <button 
+                        <button
                           onClick={() => handleEditBatch(batch)}
                           className="btn-action btn-edit"
                           title="Editar"
@@ -281,7 +361,7 @@ const BatchList = () => {
                         >
                           <FaTrashAlt />
                         </button>
-                        <button 
+                        <button
                           className="btn-action btn-check"
                           title="Verificar"
                         >

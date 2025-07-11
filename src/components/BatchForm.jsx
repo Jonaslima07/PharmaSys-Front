@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Button, Form, Modal } from "react-bootstrap";
+import { useNavigate, useParams } from "react-router-dom";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -32,23 +33,78 @@ const BatchForm = ({ batch, onClose, onSave }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [existingBatches, setExistingBatches] = useState([]);
+  const navigate = useNavigate();
+  const { id } = useParams();
 
-  useEffect(() => {
-    const fetchExistingBatches = async () => {
-      try {
-        const response = await fetch("http://localhost:5000/lotes");
-        if (!response.ok) {
-          throw new Error("Erro ao carregar lotes existentes");
+  const getToken = () => {
+  const userDataString = localStorage.getItem("userData");
+  console.log("📦 Dados brutos do localStorage:", userDataString);
+
+  if (!userDataString) return null;
+
+  const userData = JSON.parse(userDataString);
+  const token = userData?.token || null;
+
+  console.log("🔑 Token do localStorage:", token);
+  return token;
+};
+
+
+
+useEffect(() => {
+  const fetchExistingBatches = async () => {
+    const userDataString = localStorage.getItem("userData");
+
+    console.log("📦 Dados brutos do localStorage:", userDataString);
+
+    if (!userDataString) {
+      console.error("❌ Nenhum dado de usuário encontrado.");
+      navigate("/login");
+      return;
+    }
+
+    const userData = JSON.parse(userDataString);
+    const token = userData?.token;  // 👈 Correto: pega o token do objeto
+
+    console.log("🔑 Token do localStorage:", token);
+
+    if (!token) {
+      console.error("❌ Token não encontrado dentro do userData.");
+      navigate("/login");
+      return;
+    }
+
+    try {
+      const response = await fetch("http://localhost:5000/lotes", {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+
+        if (response.status === 401 && errorText.includes("expired")) {
+          localStorage.removeItem("userData");
+          alert("Sua sessão expirou. Faça login novamente.");
+          navigate("/login");
+          return;
         }
-        const data = await response.json();
-        setExistingBatches(data);
-      } catch (error) {
-        console.error("Erro ao buscar lotes existentes:", error);
+
+        throw new Error(`Erro ao buscar lotes: ${errorText}`);
       }
-    };
-    
-    fetchExistingBatches();
-  }, []);
+
+      const data = await response.json();
+      setExistingBatches(data);
+    } catch (error) {
+      console.error("❌ Erro ao buscar lotes existentes:", error);
+    }
+  };
+
+  fetchExistingBatches();
+}, [navigate]);
 
   useEffect(() => {
     if (batch) {
@@ -90,88 +146,107 @@ const BatchForm = ({ batch, onClose, onSave }) => {
   }, [batch]);
 
   const generateUniqueId = (value) => {
-    return value ? `${value}_${new Date().getTime()}` : '';
+    return value ? `${value}_${new Date().getTime()}` : "";
   };
 
   const checkDuplicates = (number, lotNumber) => {
     let isDuplicateNumber = false;
     let isDuplicateLotNumber = false;
-    
-    const batchesToCheck = existingBatches.filter(existingBatch => 
-      !batch || existingBatch.id !== batch.id
+
+    const batchesToCheck = existingBatches.filter(
+      (existingBatch) => !batch || existingBatch.id !== batch.id
     );
 
     if (number) {
       isDuplicateNumber = batchesToCheck.some(
-        batch => batch.number === number
+        (batch) => batch.number === number
       );
     }
 
     if (lotNumber) {
       isDuplicateLotNumber = batchesToCheck.some(
-        batch => batch.lotNumber === lotNumber
+        (batch) => batch.lotNumber === lotNumber
       );
     }
 
     return { isDuplicateNumber, isDuplicateLotNumber };
   };
 
-  const saveBatch = async (batchData) => {
-    setIsLoading(true);
-    setErrorMessage("");
+ const saveBatch = async (batchData) => {
+  setIsLoading(true);
+  setErrorMessage("");
 
-    try {
-      const isEdit = !!batchData.id;
-      const endpoint = isEdit
-        ? `http://localhost:5000/lotes/${batchData.id}`
-        : "http://localhost:5000/lotes";
+  try {
+    const isEdit = !!batchData.id;
+    const endpoint = isEdit
+      ? `http://localhost:5000/lotes/${batchData.id}`
+      : "http://localhost:5000/lotes";
 
-      const payload = {
-        number: batchData.number,
-        lotNumber: batchData.lotNumber,
-        expirationDate: batchData.expirationDate,
-        manufacturer: batchData.manufacturer,
-        quantity: Number(batchData.quantity) || 0,
-        medicationName: batchData.medicationName,
-        medicationImage: batchData.medicationImage || null,
-        manufacturingDate: batchData.manufacturingDate,
-        grams: batchData.grams,
-        uniqueFarmacyLotId: batchData.uniqueFarmacyLotId,
-        uniquePurchaseLotId: batchData.uniquePurchaseLotId,
-      };
+    const payload = {
+      number: batchData.number,
+      lotNumber: batchData.lotNumber,
+      expirationDate: batchData.expirationDate,
+      manufacturer: batchData.manufacturer,
+      quantity: Number(batchData.quantity) || 0,
+      medicationName: batchData.medicationName,
+      medicationImage: batchData.medicationImage || null,
+      manufacturingDate: batchData.manufacturingDate,
+      grams: batchData.grams,
+      uniqueFarmacyLotId: batchData.uniqueFarmacyLotId,
+      uniquePurchaseLotId: batchData.uniquePurchaseLotId,
+    };
 
-      const response = await fetch(endpoint, {
-        method: isEdit ? "PUT" : "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
+    const token = getToken();
 
-      if (!response.ok) {
-        let errorData;
-        try {
-          errorData = await response.json();
-        } catch (e) {
-          errorData = { message: `Erro HTTP! status: ${response.status}` };
-        }
-        toast.error(errorData.message || "Erro ao salvar o lote");
-        throw new Error(errorData.message || "Erro ao salvar o lote");
+    if (!token) {
+      alert("Token não encontrado. Faça login novamente.");
+      navigate("/login");
+      return;
+    }
+
+    const response = await fetch(endpoint, {
+      method: isEdit ? "PUT" : "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+
+      if (response.status === 401 && errorText.includes("expired")) {
+        localStorage.removeItem("userData");
+        localStorage.removeItem("token");
+        alert("Sua sessão expirou. Faça login novamente.");
+        navigate("/login");
+        return;
       }
 
-      const result = await response.json();
-      toast.success(
-        isEdit ? "Lote atualizado com sucesso!" : "Lote adicionado com sucesso!"
-      );
-      return result;
-    } catch (error) {
-      setErrorMessage(error.message || "Erro ao salvar o lote");
-      throw error;
-    } finally {
-      setIsLoading(false);
+      let errorData;
+      try {
+        errorData = JSON.parse(errorText);
+      } catch {
+        errorData = { message: `Erro HTTP! status: ${response.status}` };
+      }
+      toast.error(errorData.message || "Erro ao salvar o lote");
+      throw new Error(errorData.message || "Erro ao salvar o lote");
     }
-  };
+
+    const result = await response.json();
+    toast.success(
+      isEdit ? "Lote atualizado com sucesso!" : "Lote adicionado com sucesso!"
+    );
+    return result;
+  } catch (error) {
+    setErrorMessage(error.message || "Erro ao salvar o lote");
+    throw error;
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   const handleInputChange = (name, value) => {
     // Se estiver alterando number ou lotNumber, verifica duplicidade
@@ -181,7 +256,7 @@ const BatchForm = ({ batch, onClose, onSave }) => {
         name === "lotNumber" ? value : formData.lotNumber
       );
 
-      setFormErrors(prev => ({
+      setFormErrors((prev) => ({
         ...prev,
         duplicateNumber: isDuplicateNumber,
         duplicateLotNumber: isDuplicateLotNumber,
@@ -219,13 +294,16 @@ const BatchForm = ({ batch, onClose, onSave }) => {
   };
 
   const handleSubmit = async () => {
-    const manufacturingDate = new Date(formData.manufacturingDate + "T00:00:00");
+    const manufacturingDate = new Date(
+      formData.manufacturingDate + "T00:00:00"
+    );
     const expirationDate = new Date(formData.expirationDate + "T00:00:00");
 
-    const manufacturingDateString = manufacturingDate.toISOString().split("T")[0];
+    const manufacturingDateString = manufacturingDate
+      .toISOString()
+      .split("T")[0];
     const expirationDateString = expirationDate.toISOString().split("T")[0];
 
-    
     const { isDuplicateNumber, isDuplicateLotNumber } = checkDuplicates(
       formData.number,
       formData.lotNumber
@@ -333,15 +411,15 @@ const BatchForm = ({ batch, onClose, onSave }) => {
               type="invalid"
               style={{ marginTop: "-16px", fontSize: "14px", color: "#dc3545" }}
             >
-              {formErrors.duplicateNumber 
-                ? "Este código de lote de farmácia já existe" 
+              {formErrors.duplicateNumber
+                ? "Este código de lote de farmácia já existe"
                 : "Por favor, informe o código do lote"}
             </Form.Control.Feedback>
           </Form.Group>
 
           <Form.Group className="mb-3" controlId="lotNumber">
             <Form.Label style={{ color: "#000000" }}>
-              Lote de Compra do Medicamento 
+              Lote de Compra do Medicamento
             </Form.Label>
             <Form.Control
               type="text"
@@ -358,8 +436,8 @@ const BatchForm = ({ batch, onClose, onSave }) => {
               type="invalid"
               style={{ marginTop: "-16px", fontSize: "14px", color: "#dc3545" }}
             >
-              {formErrors.duplicateLotNumber 
-                ? "Este lote de compra já existe" 
+              {formErrors.duplicateLotNumber
+                ? "Este lote de compra já existe"
                 : "Por favor, informe o lote de compra"}
             </Form.Control.Feedback>
           </Form.Group>
@@ -476,7 +554,8 @@ const BatchForm = ({ batch, onClose, onSave }) => {
           Cancelar
         </Button>
         <Button variant="primary" onClick={handleSubmit} disabled={isLoading}>
-          {isLoading ? "Salvando..." : formData.id ? "Atualizar" : "Salvar"} Lote
+          {isLoading ? "Salvando..." : formData.id ? "Atualizar" : "Salvar"}{" "}
+          Lote
         </Button>
       </Modal.Footer>
 
