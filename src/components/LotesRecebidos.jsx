@@ -10,7 +10,6 @@ import {
 } from "react-icons/fa";
 import LoteForm from "./LoteForm";
 
-// Definições estáticas (formas, status, unidades)
 const formasFarmaceuticas = [
   "Comprimido",
   "Cápsula",
@@ -38,7 +37,6 @@ const classesTerapeuticas = [
 ];
 
 const statusLote = ["Vencido", "A vencer"];
-
 const unidadesMedida = ["mg", "ml", "unidade", "frasco", "caixa", "blister"];
 
 const LotesRecebidos = () => {
@@ -47,23 +45,22 @@ const LotesRecebidos = () => {
   const [filtros, setFiltros] = useState({
     fornecedor: "todos",
     status: "todos",
-    unidade: "todas", // A chave unidade foi inicializada corretamente
+    unidade: "todas",
   });
   const [dialogAberto, setDialogAberto] = useState(false);
   const [loteEditando, setLoteEditando] = useState(null);
   const [formData, setFormData] = useState({});
   const [loteId, setLoteId] = useState(null);
+  const [excluindo, setExcluindo] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   const calculateStatus = (dataValidade) => {
     if (!dataValidade) return "A vencer";
-
-    const hoje = new Date();
     const dataVal = new Date(dataValidade);
-
-    // Remove a parte de hora/minuto/segundo para comparar apenas datas
+    if (isNaN(dataVal.getTime())) return "A vencer";
+    const hoje = new Date();
     hoje.setHours(0, 0, 0, 0);
     dataVal.setHours(0, 0, 0, 0);
-
     return dataVal < hoje ? "Vencido" : "A vencer";
   };
 
@@ -83,86 +80,86 @@ const LotesRecebidos = () => {
         };
   };
 
-  const handleSaveLote = (novoLote) => {
-    const statusCalculado = calculateStatus(novoLote.dataValidade);
-    
-    const loteComStatus = {
-      ...novoLote,
-      statusLote: statusCalculado,
-      gramas: novoLote.gramas, // Adicionando o campo de gramas
-    };
-
-    if (loteEditando) {
-      setLotes((prevLotes) =>
-        prevLotes.map((lote) => (lote.id === loteComStatus.id ? loteComStatus : lote))
-      );
-    } else {
-      setLotes((prevLotes) => [...prevLotes, loteComStatus]);
-    }
-  };
-
   const initializeFormData = () => {
     const hoje = new Date();
     const umMesAFrente = new Date();
     umMesAFrente.setMonth(umMesAFrente.getMonth() + 1);
-
     setFormData({
       numeroLote: "",
       nomeMedicamento: "",
-      dataFabricacao: new Date(),
+      dataFabricacao: hoje,
       dataValidade: umMesAFrente,
       quantidadeRecebida: 0,
       fornecedor: "",
       statusLote: calculateStatus(umMesAFrente),
       responsavelRecebimento: "",
-      dataRecebimento: new Date(),
+      dataRecebimento: hoje,
       unidadeMedida: "",
-      loteCompraMedicamento:"",
+      loteCompraMedicamento: "",
       gramas: 0,
     });
   };
 
   useEffect(() => {
     const fetchLotes = async () => {
+      setLoading(true);
       try {
-        const response = await fetch("http://localhost:5000/lotesrecebidos");
-        if (!response.ok) {
-          throw new Error("Erro ao carregar os lotes.");
+        let userData = null;
+        try {
+          const userDataString = localStorage.getItem("userData");
+          if (userDataString && userDataString !== "undefined") {
+            userData = JSON.parse(userDataString);
+          }
+        } catch (error) {
+          console.error("Erro ao parsear userData:", error);
+          toast.error("Erro ao carregar dados do usuário");
+          return;
         }
+
+        const token = userData?.token;
+        if (!token) {
+          toast.error("Token de autenticação não encontrado");
+          return;
+        }
+
+        const response = await fetch("http://localhost:5000/batch", {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!response.ok) throw new Error("Erro ao carregar os lotes");
+
         const data = await response.json();
         setLotes(data);
       } catch (error) {
         console.error("Erro ao buscar lotes:", error);
-        toast({
-          title: "Erro ao carregar lotes",
-          description: error.message,
-          variant: "destructive",
-        });
+        toast.error(error.message || "Erro ao carregar lotes");
+      } finally {
+        setLoading(false);
       }
     };
+
     fetchLotes();
   }, []);
 
   const lotesFiltrados = lotes.filter((lote) => {
     try {
       const buscaLower = busca.toLowerCase();
-      const statusLote = calculateStatus(lote.dataValidade);
-      
+      const status = calculateStatus(lote.dataValidade);
+
       const matchBusca =
-        (lote.nomeMedicamento?.toLowerCase().includes(buscaLower)) ||
-        (lote.numeroLote?.toLowerCase().includes(buscaLower)) ||
+        lote.nomeMedicamento?.toLowerCase().includes(buscaLower) ||
+        lote.numeroLote?.toLowerCase().includes(buscaLower) ||
         false;
-
       const matchFornecedor =
-        filtros.fornecedor === "todos" || 
+        filtros.fornecedor === "todos" ||
         (lote.fornecedor && lote.fornecedor === filtros.fornecedor);
-
       const matchStatus =
-        filtros.status === "todos" || 
-        statusLote === filtros.status;
-
-       const matchUnidade =
-        filtros.unidade === "todas" || // Mudança de medicamento para unidade
+        filtros.status === "todos" || status === filtros.status;
+      const matchUnidade =
+        filtros.unidade === "todas" ||
         (lote.unidadeMedida && lote.unidadeMedida === filtros.unidade);
 
       return matchBusca && matchFornecedor && matchStatus && matchUnidade;
@@ -174,121 +171,79 @@ const LotesRecebidos = () => {
 
   const validarFormulario = () => {
     if (!formData.numeroLote || formData.numeroLote.length > 12) {
-      toast({
-        title: "Erro de Validação",
-        description:
-          "Número do lote é obrigatório e deve ter no máximo 12 caracteres.",
-        variant: "destructive",
-      });
+      toast.error("Número do lote inválido");
       return false;
     }
     if (!formData.nomeMedicamento) {
-      toast({
-        title: "Erro de Validação",
-        description: "Nome do medicamento é obrigatório.",
-        variant: "destructive",
-      });
+      toast.error("Nome do medicamento obrigatório");
       return false;
     }
-    if (!formData.dataFabricacao || formData.dataFabricacao > new Date()) {
-      toast({
-        title: "Erro de Validação",
-        description: "Data de fabricação não pode ser futura.",
-        variant: "destructive",
-      });
+    if (
+      !formData.dataFabricacao ||
+      new Date(formData.dataFabricacao) > new Date()
+    ) {
+      toast.error("Data de fabricação inválida");
       return false;
     }
     if (
       !formData.dataValidade ||
-      formData.dataValidade <= formData.dataFabricacao
+      new Date(formData.dataValidade) <= new Date(formData.dataFabricacao)
     ) {
-      toast({
-        title: "Erro de Validação",
-        description:
-          "Data de validade deve ser posterior à data de fabricação.",
-        variant: "destructive",
-      });
+      toast.error("Data de validade inválida");
       return false;
     }
     if (!formData.quantidadeRecebida || formData.quantidadeRecebida <= 0) {
-      toast({
-        title: "Erro de Validação",
-        description: "Quantidade recebida deve ser maior que 0.",
-        variant: "destructive",
-      });
+      toast.error("Quantidade inválida");
       return false;
     }
     if (!formData.fornecedor) {
-      toast({
-        title: "Erro de Validação",
-        description: "Fornecedor é obrigatório.",
-        variant: "destructive",
-      });
+      toast.error("Fornecedor obrigatório");
       return false;
     }
     if (!formData.responsavelRecebimento) {
-      toast({
-        title: "Erro de Validação",
-        description: "Responsável pelo recebimento é obrigatório.",
-        variant: "destructive",
-      });
+      toast.error("Responsável obrigatório");
       return false;
     }
-    if (!formData.loteCompraMedicamento || formData.loteCompraMedicamento.length > 12) {
-    toast({
-      title: "Erro de Validação",
-      description: "Número do lote de compra é obrigatório.",
-      variant: "destructive",
-    });
-    return false;
-  }
-    if (!formData.dataRecebimento || formData.dataRecebimento > new Date()) {
-      toast({
-        title: "Erro de Validação",
-        description: "Data de recebimento não pode ser futura.",
-        variant: "destructive",
-      });
+    if (
+      !formData.loteCompraMedicamento ||
+      formData.loteCompraMedicamento.length > 12
+    ) {
+      toast.error("Lote de compra inválido");
+      return false;
+    }
+    if (
+      !formData.dataRecebimento ||
+      new Date(formData.dataRecebimento) > new Date()
+    ) {
+      toast.error("Data de recebimento inválida");
       return false;
     }
     if (!formData.unidadeMedida) {
-      toast({
-        title: "Erro de Validação",
-        description: "Unidade de medida é obrigatória.",
-        variant: "destructive",
-      });
+      toast.error("Unidade obrigatória");
       return false;
     }
-
     return true;
   };
 
-  const salvarLote = () => {
+  const handleSaveLote = (novoLote) => {
     if (!validarFormulario()) return;
-
-    const statusCalculado = calculateStatus(formData.dataValidade);
-
-    const novoLote = {
-      id: loteEditando?.id || Date.now().toString(),
-      ...formData,
-      statusLote: statusCalculado
+    const statusCalculado = calculateStatus(novoLote.dataValidade);
+    const loteComStatus = {
+      ...novoLote,
+      statusLote: statusCalculado,
+      gramas: novoLote.gramas,
     };
 
     if (loteEditando) {
-      setLotes(
-        lotes.map((lote) => (lote.id === loteEditando.id ? novoLote : lote))
+      setLotes((prev) =>
+        prev.map((lote) =>
+          lote.id === loteComStatus.id ? loteComStatus : lote
+        )
       );
-      toast({
-        title: "Sucesso",
-        description: "Lote editado com sucesso!",
-        className: "bg-green-100 text-green-800 border-green-300",
-      });
+      toast.success("Lote atualizado com sucesso!");
     } else {
-      setLotes([...lotes, novoLote]);
-      toast({
-        title: "Sucesso",
-        description: "Lote cadastrado com sucesso!",
-        className: "bg-green-100 text-green-800 border-green-300",
-      });
+      setLotes((prev) => [...prev, loteComStatus]);
+      toast.success("Lote cadastrado com sucesso!");
     }
 
     setDialogAberto(false);
@@ -303,62 +258,76 @@ const LotesRecebidos = () => {
     setDialogAberto(true);
   };
 
-  const [excluindo, setExcluindo] = useState(null);
-
   const excluirLote = async (id, nomeMedicamento) => {
-    if (
-      !window.confirm(
-        `Tem certeza que deseja excluir o lote "${nomeMedicamento}"?`
-      )
-    ) {
-      return;
-    }
+    if (!window.confirm(`Deseja excluir o lote "${nomeMedicamento}"?`)) return;
 
     try {
       setExcluindo(id);
-
-      const response = await fetch(
-        `http://localhost:5000/lotesrecebidos/${id}`,
-        {
-          method: "DELETE",
+      let userData = null;
+      try {
+        const userDataString = localStorage.getItem("userData");
+        if (userDataString && userDataString !== "undefined") {
+          userData = JSON.parse(userDataString);
         }
-      );
+      } catch (error) {
+        console.error("Erro ao parsear userData:", error);
+        toast.error("Erro ao carregar dados do usuário");
+        return;
+      }
+
+      const token = userData?.token;
+      if (!token) {
+        toast.error("Token de autenticação não encontrado");
+        return;
+      }
+
+      const response = await fetch(`http://localhost:5000/batch/${id}`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
       if (!response.ok) throw new Error("Erro ao excluir lote");
 
       setLotes(lotes.filter((lote) => lote.id !== id));
       toast.success("Lote excluído com sucesso!");
     } catch (error) {
-      toast.error("Falha ao excluir lote");
-      console.error("Erro:", error);
+      console.error("Erro ao excluir lote:", error);
+      toast.error(error.message || "Falha ao excluir lote");
     } finally {
       setExcluindo(null);
     }
   };
 
   const exportarExcel = () => {
+    if (lotesFiltrados.length === 0) {
+      toast.warning("Nenhum dado para exportar");
+      return;
+    }
+
     const csvContent = [
       [
         "Núm Lote do medicamento",
-        "Núm do Lote Compra", 
+        "Núm do Lote Compra",
         "Nome do Medicamento",
         "Data Fabricação",
         "Data Validade",
-        "Quantidade do medicamento",
+        "Quantidade medicamentos no lote",
         "Fornecedor",
         "Status",
         "Responsável",
-        
       ],
       ...lotesFiltrados.map((lote) => [
         lote.numeroLote,
         lote.loteCompraMedicamento,
         lote.nomeMedicamento,
-        format(lote.dataFabricacao, "dd/MM/yyyy"),
-        format(lote.dataValidade, "dd/MM/yyyy"),
+        format(new Date(lote.dataFabricacao), "dd/MM/yyyy"),
+        format(new Date(lote.dataValidade), "dd/MM/yyyy"),
         lote.quantidadeRecebida.toString(),
         lote.fornecedor,
-        lote.statusLote,
+        calculateStatus(lote.dataValidade),
         lote.responsavelRecebimento,
       ]),
     ]
@@ -371,12 +340,10 @@ const LotesRecebidos = () => {
     link.download = "lotes_medicamentos.csv";
     link.click();
 
-    toast({
-      title: "Sucesso",
-      description: "Arquivo Excel exportado com sucesso!",
-      className: "bg-green-100 text-green-800 border-green-300",
-    });
+    toast.success("Arquivo exportado com sucesso!");
   };
+
+  if (loading) return <div>Carregando lotes...</div>;
 
   return (
     <div style={styles.container}>
@@ -390,6 +357,7 @@ const LotesRecebidos = () => {
           </p>
         </div>
       </header>
+
       <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "1.5rem" }}>
         <div style={styles.card}>
           <div style={styles.cardHeader}>
@@ -416,7 +384,11 @@ const LotesRecebidos = () => {
                   Novo Lote
                 </button>
 
-                <button style={styles.buttonexcell} onClick={exportarExcel}>
+                <button
+                  style={styles.buttonexcell}
+                  onClick={exportarExcel}
+                  disabled={lotes.length === 0}
+                >
                   <FaDownload
                     style={{
                       width: "1rem",
@@ -455,16 +427,6 @@ const LotesRecebidos = () => {
                   value={busca}
                   onChange={(e) => setBusca(e.target.value)}
                 />
-                <FaSearch
-                  style={{
-                    position: "absolute",
-                    left: "0.75rem",
-                    top: "0.75rem",
-                    width: "1rem",
-                    height: "1rem",
-                    color: "#9ca3af",
-                  }}
-                />
               </div>
 
               <div style={{ display: "flex", gap: "0.5rem" }}>
@@ -475,17 +437,16 @@ const LotesRecebidos = () => {
                     setFiltros({ ...filtros, fornecedor: e.target.value })
                   }
                 >
-                  <option key="todos" value="todos">
-                    Todos fornecedores
-                  </option>
-                  {Array.from(
-                    new Set(lotes.map((lote) => lote.fornecedor))
-                  ).map((fornecedor) => (
-                    <option key={fornecedor} value={fornecedor}>
-                      {fornecedor}
-                    </option>
-                  ))}
+                  <option value="todos">Todos fornecedores</option>
+                  {Array.from(new Set(lotes.map((lote) => lote.fornecedor)))
+                    .filter(Boolean)
+                    .map((fornecedor) => (
+                      <option key={fornecedor} value={fornecedor}>
+                        {fornecedor}
+                      </option>
+                    ))}
                 </select>
+
                 <select
                   style={styles.input3}
                   value={filtros.status}
@@ -493,25 +454,22 @@ const LotesRecebidos = () => {
                     setFiltros({ ...filtros, status: e.target.value })
                   }
                 >
-                  <option key="todos" value="todos">
-                    Todos status
-                  </option>
+                  <option value="todos">Todos status</option>
                   {statusLote.map((status) => (
                     <option key={status} value={status}>
                       {status}
                     </option>
                   ))}
                 </select>
+
                 <select
                   style={styles.input1}
-                  value={filtros.unidadeMedida}
+                  value={filtros.unidade}
                   onChange={(e) =>
                     setFiltros({ ...filtros, unidade: e.target.value })
                   }
                 >
-                  <option key="todas" value="todas">
-                    Todas as unidades
-                  </option>
+                  <option value="todas">Todas as unidades</option>
                   {unidadesMedida.map((unidade) => (
                     <option key={unidade} value={unidade}>
                       {unidade}
@@ -534,13 +492,17 @@ const LotesRecebidos = () => {
                 <table style={styles.table}>
                   <thead style={{ backgroundColor: "#dbeafe" }}>
                     <tr>
-                      <th style={styles.tableHeader}>Núm Lote do medicamento</th>
-                      <th style={styles.tableHeader}>Núm do Lote Compra</th> 
+                      <th style={styles.tableHeader}>
+                        Núm Lote do medicamento
+                      </th>
+                      <th style={styles.tableHeader}>Núm do Lote Compra</th>
                       <th style={styles.tableHeader}>Nome do Medicamento</th>
                       <th style={styles.tableHeader}>Data Fabricação</th>
                       <th style={styles.tableHeader}>Data Validade</th>
-                      <th style={styles.tableHeader}>Quantidade medicamentos no lote</th>
-                      <th style={styles.tableHeader}>Gramas</th> 
+                      <th style={styles.tableHeader}>
+                        Quantidade medicamentos no lote
+                      </th>
+                      <th style={styles.tableHeader}>Gramas</th>
                       <th style={styles.tableHeader}>Unidade</th>
                       <th style={styles.tableHeader}>Fornecedor</th>
                       <th style={styles.tableHeader}>Status</th>
@@ -553,7 +515,7 @@ const LotesRecebidos = () => {
                     {lotesFiltrados.length === 0 ? (
                       <tr>
                         <td
-                          colSpan={11}
+                          colSpan={13}
                           style={{
                             textAlign: "center",
                             padding: "2rem",
@@ -576,20 +538,25 @@ const LotesRecebidos = () => {
                           }
                         >
                           <td style={styles.tableCell}>{lote.numeroLote}</td>
-                          <td style={styles.tableCell}>{lote.loteCompraMedicamento}</td> 
+                          <td style={styles.tableCell}>
+                            {lote.loteCompraMedicamento}
+                          </td>
                           <td style={styles.tableCell}>
                             {lote.nomeMedicamento}
                           </td>
                           <td style={styles.tableCell}>
-                            {format(lote.dataFabricacao, "dd/MM/yyyy")}
+                            {format(
+                              new Date(lote.dataFabricacao),
+                              "dd/MM/yyyy"
+                            )}
                           </td>
                           <td style={styles.tableCell}>
-                            {format(lote.dataValidade, "dd/MM/yyyy")}
+                            {format(new Date(lote.dataValidade), "dd/MM/yyyy")}
                           </td>
                           <td style={styles.tableCell}>
                             {lote.quantidadeRecebida}
                           </td>
-                          <td style={styles.tableCell}>{lote.gramas}</td> 
+                          <td style={styles.tableCell}>{lote.gramas}</td>
                           <td style={styles.tableCell}>{lote.unidadeMedida}</td>
                           <td style={styles.tableCell}>{lote.fornecedor}</td>
                           <td style={styles.tableCell}>
@@ -605,7 +572,10 @@ const LotesRecebidos = () => {
                             {lote.responsavelRecebimento}
                           </td>
                           <td style={styles.tableCell}>
-                            {format(lote.dataRecebimento, "dd/MM/yyyy")}
+                            {format(
+                              new Date(lote.dataRecebimento),
+                              "dd/MM/yyyy"
+                            )}
                           </td>
                           <td style={styles.tableCell}>
                             <div style={{ display: "flex", gap: "0.5rem" }}>
@@ -676,7 +646,12 @@ const LotesRecebidos = () => {
                         color: "#1e40af",
                       }}
                     >
-                      {lotes.filter(lote => calculateStatus(lote.dataValidade) === "Vencido").length}
+                      {
+                        lotes.filter(
+                          (lote) =>
+                            calculateStatus(lote.dataValidade) === "Vencido"
+                        ).length
+                      }
                     </div>
                     <div style={{ fontSize: "0.875rem", color: "#4b5563" }}>
                       Lotes Vencidos
@@ -693,7 +668,8 @@ const LotesRecebidos = () => {
                       }}
                     >
                       {lotes.reduce(
-                        (total, lote) => total + lote.quantidadeRecebida,
+                        (total, lote) =>
+                          total + (Number(lote.quantidadeRecebida) || 0),
                         0
                       )}
                     </div>
@@ -709,46 +685,23 @@ const LotesRecebidos = () => {
       </div>
 
       {dialogAberto && (
-        <div
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: "rgba(0, 0, 0, 0.5)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 50,
-          }}
-        >
-          <div
-            style={{
-              backgroundColor: "white",
-              borderRadius: "0.5rem",
-              width: "90%",
-              maxWidth: "56rem",
-              maxHeight: "90vh",
-              overflowY: "auto",
-              padding: "1.5rem",
-            }}
-          >
+        <div style={styles.modalOverlay}>
+          <div style={styles.modalContent}>
             <LoteForm
+              loteEditando={loteEditando}
               formData={formData}
+              setFormData={setFormData}
               onSave={handleSaveLote}
               onCancel={() => {
                 setDialogAberto(false);
                 setLoteEditando(null);
+                initializeFormData();
               }}
               isEditing={!!loteEditando}
-              unidadesMedida={unidadesMedida}
+              loteId={loteId}
               formasFarmaceuticas={formasFarmaceuticas}
               classesTerapeuticas={classesTerapeuticas}
-              statusLote={statusLote}
-              loteId={loteId}
-              setDialogAberto={setDialogAberto}
-              initializeFormData={initializeFormData}
+              unidadesMedida={unidadesMedida}
             />
           </div>
         </div>
@@ -810,7 +763,6 @@ const styles = {
     position: "relative",
     left: "900px",
   },
-
   buttonOutlineHover: {
     backgroundColor: "#dbeafe",
   },
@@ -930,6 +882,27 @@ const styles = {
     borderRadius: "0.375rem",
     fontSize: "0.75rem",
     fontWeight: "500",
+  },
+  modalOverlay: {
+    position: "fixed",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 50,
+  },
+  modalContent: {
+    backgroundColor: "white",
+    borderRadius: "0.5rem",
+    width: "90%",
+    maxWidth: "56rem",
+    maxHeight: "90vh",
+    overflowY: "auto",
+    padding: "1.5rem",
   },
 };
 

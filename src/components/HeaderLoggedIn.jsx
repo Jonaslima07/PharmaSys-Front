@@ -3,14 +3,26 @@ import { Navbar, Nav, Button, Modal } from 'react-bootstrap';
 import { Link, useNavigate } from 'react-router-dom';
 import './Header.css';
 
+const safeParseUserData = () => {
+  const userDataString = localStorage.getItem('userData');
+  if (!userDataString || userDataString === 'undefined' || userDataString === 'null') {
+    return null;
+  }
+  try {
+    return JSON.parse(userDataString);
+  } catch (error) {
+    console.error('Erro ao parsear userData:', error);
+    return null;
+  }
+};
+
 const HeaderLoggedIn = ({ onLogout }) => {
   const [hovered, setHovered] = useState(false);
   const [clicked, setClicked] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const navigate = useNavigate();
 
-  const userDataString = localStorage.getItem('userData');
-  const userData = userDataString ? JSON.parse(userDataString) : null;
+  const userData = safeParseUserData();
   const role = userData?.user?.role;
   const name = userData?.user?.name;
 
@@ -36,7 +48,6 @@ const HeaderLoggedIn = ({ onLogout }) => {
         <Navbar.Toggle aria-controls="basic-navbar-nav" />
         <Navbar.Collapse id="basic-navbar-nav">
           <Nav className="ml-auto">
-
             <Nav.Link
               as={Link}
               to="/lotes"
@@ -92,7 +103,7 @@ const HeaderLoggedIn = ({ onLogout }) => {
               Cadastrar Medicamentos
             </Nav.Link>
 
-            {/* ✅ Só aparece para ADMINISTRADOR */}
+            {/* Só aparece para ADMINISTRADOR */}
             {role === 'administrador' && (
               <Nav.Link
                 as={Link}
@@ -116,10 +127,6 @@ const HeaderLoggedIn = ({ onLogout }) => {
             >
               Perfil
             </Nav.Link>
-
-            {/* <span style={{ color: '#fff', fontWeight: '600', position: 'relative', left: '150px', marginRight: '20px' }}>
-              {name && `👤 ${name}`}
-            </span> */}
 
             <Button variant="link" onClick={handleShowModal} style={{ ...linkStyle, marginLeft: '10px' }}>
               Sair
@@ -149,6 +156,7 @@ const HeaderLoggedIn = ({ onLogout }) => {
     </>
   );
 };
+
 
 export default HeaderLoggedIn;
 

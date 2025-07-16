@@ -7,7 +7,6 @@ const CompletarCadastro = () => {
     name: "",
     email: "",
     phone: "",
-    // endereco: "",
     crf: "",
     birthDate: "",
     password: "",
@@ -20,41 +19,43 @@ const CompletarCadastro = () => {
 
   useEffect(() => {
     const userData = JSON.parse(localStorage.getItem("userData"));
-    if (userData && userData.user) {
-      setFormData((prev) => ({
-        ...prev,
-        name: userData.user.name || "",
-        email: userData.user.email || "",
-      }));
+    const token = userData?.token;
+    const email = userData?.user?.email;
 
-      const verificarCadastro = async () => {
-        try {
-          const token = userData?.token;
-          const email = userData.user.email;
-
-          const response = await fetch(
-            `http://localhost:5000/usuarios/verificar-cadastro?email=${email}`,
-            {
-              headers: {
-                Authorization: `Bearer ${token}`,
-              },
-            }
-          );
-
-          const result = await response.json();
-
-          if (response.ok && result.cadastroCompleto) {
-            navigate("/cadastrarlotes");
-          }
-        } catch (error) {
-          console.error("Erro ao verificar cadastro:", error);
-        }
-      };
-
-      verificarCadastro();
-    } else {
+    if (!userData || !token || !email) {
+      console.error("Usuário ou token não encontrado!");
       navigate("/login");
+      return;
     }
+
+    setFormData((prev) => ({
+      ...prev,
+      name: userData.user.name || "",
+      email: userData.user.email || "",
+    }));
+
+    const verificarCadastro = async () => {
+      try {
+        const response = await fetch(`http://localhost:5000/usuarios/verificar-cadastro?email=${encodeURIComponent(email)}`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`,
+          },
+        });
+
+        const data = await response.json();
+        console.log("Verificação de cadastro:", data);
+
+        if (data.cadastroCompleto) {
+          navigate("/cadastrarlotes");
+        }
+      } catch (error) {
+        console.error("Erro ao verificar cadastro:", error);
+      }
+    };
+
+    verificarCadastro();
   }, [navigate]);
 
   const showToast = (message, type) => {
@@ -67,7 +68,7 @@ const CompletarCadastro = () => {
     const { name, value } = e.target;
 
     if (name === "crf") {
-      const numericValue = value.replace(/\D/g, ""); 
+      const numericValue = value.replace(/\D/g, "");
       setFormData((prev) => ({ ...prev, [name]: numericValue }));
     } else {
       setFormData((prev) => ({ ...prev, [name]: value }));
@@ -105,20 +106,23 @@ const CompletarCadastro = () => {
       const userData = JSON.parse(localStorage.getItem("userData"));
       const token = userData?.token;
 
-      const response = await fetch(
-        "http://localhost:5000/usuarios/completar-cadastro",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            ...formData,
-            password,
-          }),
-        }
-      );
+      if (!token) {
+        showToast("Token não encontrado!", "error");
+        setIsLoading(false);
+        return;
+      }
+
+      const response = await fetch("http://localhost:5000/usuarios/completar-cadastro", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          ...formData,
+          password,
+        }),
+      });
 
       const result = await response.json();
 
@@ -180,18 +184,6 @@ const CompletarCadastro = () => {
           />
         </div>
 
-        {/* <div style={styles.formGroup}>
-          <label style={styles.label}>Endereço *</label>
-          <input
-            type="text"
-            name="endereco"
-            value={formData.endereco}
-            onChange={handleChange}
-            placeholder="Rua, número, cidade"
-            style={styles.input}
-          />
-        </div> */}
-
         <div style={styles.formGroup}>
           <label style={styles.label}>CRF *</label>
           <input
@@ -247,6 +239,8 @@ const CompletarCadastro = () => {
     </div>
   );
 };
+
+
 
 const styles = {
   container: {

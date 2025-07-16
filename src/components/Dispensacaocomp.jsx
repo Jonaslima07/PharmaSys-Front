@@ -7,18 +7,16 @@ const Dispensacaocomp = () => {
   const [medicamentos, setMedicamentos] = useState([]);
   const [selectedMed, setSelectedMed] = useState(null);
   const [quantidade, setQuantidade] = useState(1);
-  const [dispensadoPor, setDispensadoPor] = useState("");
-  const [cartaoSus, setCartaoSus] = useState("");
+  const [nomePaciente, setNomePaciente] = useState("");
+  const [cpfPaciente, setCpfPaciente] = useState("");
   const [showModal, setShowModal] = useState(false);
-  const [successMsg, setSuccessMsg] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [historico, setHistorico] = useState([]);
   const [pacientes, setPacientes] = useState([]);
   const [noPatients, setNoPatients] = useState(false);
 
-  const getUserLogged = () => {
+  const getUserData = () => {
     const userData = JSON.parse(localStorage.getItem("userData"));
-    return userData ? userData.name : "Desconhecido";
+    return userData || { id: null, name: "Desconhecido", token: null };
   };
 
   const getImageSource = (imageData) => {
@@ -36,16 +34,30 @@ const Dispensacaocomp = () => {
   };
 
   useEffect(() => {
+    const userData = getUserData();
+
+    if (!userData.token) {
+      toast.error("Token de autenticação ausente. Faça login novamente.");
+      return;
+    }
+
     const fetchMedicamentos = async () => {
       setIsLoading(true);
       try {
-        const response = await fetch("http://localhost:5000/lotes");
+        const response = await fetch("http://localhost:5000/lotes", {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${userData.token}`,
+          },
+        });
+
         if (response.ok) {
           const data = await response.json();
           const medicamentosFormatados = data
             .filter((med) => med.quantity > 0)
             .map((med) => ({
               ...med,
+              lote_id: med.id,
               imageUrl: getImageSource(med.medicationImage || med.imageUrl),
             }));
           setMedicamentos(medicamentosFormatados);
@@ -62,7 +74,13 @@ const Dispensacaocomp = () => {
 
     const fetchPacientes = async () => {
       try {
-        const response = await fetch("http://localhost:5000/pacientes");
+        const response = await fetch("http://localhost:5000/pacientes", {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${userData.token}`,
+          },
+        });
+
         if (response.ok) {
           const data = await response.json();
           setPacientes(data);
@@ -80,39 +98,30 @@ const Dispensacaocomp = () => {
     fetchPacientes();
   }, []);
 
-  const handleDispensarClick = (med) => {
-    if (noPatients) {
-      toast.error("Nenhum paciente cadastrado no sistema.");
-      return;
+  const handlePacienteChange = (e) => {
+    const cpf = e.target.value;
+    setCpfPaciente(cpf);
+    const paciente = pacientes.find((p) => p.cpf === cpf);
+    if (paciente) {
+      setNomePaciente(paciente.nome);
+    } else {
+      setNomePaciente("");
     }
-
-    setSelectedMed(med);
-    setQuantidade(1);
-    setShowModal(true);
   };
 
-  // Função para encontrar o paciente baseado no CPF ou Cartão SUS
-  const handlePacienteChange = (e) => {
-    const searchTerm = e.target.value.trim();
-    setCartaoSus(searchTerm);
-
-    // Encontrar paciente pelo CPF ou Cartão SUS
-    const selectedPaciente = pacientes.find(
-      (p) => p.cpf === searchTerm || p.numeroCartaoSUS === searchTerm
-    );
-
-    if (selectedPaciente) {
-      setDispensadoPor(selectedPaciente.nome);
-    } else {
-      setDispensadoPor(""); // Se não encontrar, limpa o nome
-    }
+  const handleDispensarClick = (med) => {
+    setSelectedMed(med);
+    setQuantidade(1);
+    setCpfPaciente("");
+    setNomePaciente("");
+    setShowModal(true);
   };
 
   const confirmarDispensacao = async () => {
     if (!selectedMed) return;
 
-    if (!dispensadoPor.trim()) {
-      toast.error("Selecione um paciente.");
+    if (!nomePaciente.trim()) {
+      toast.error("Selecione um paciente válido.");
       return;
     }
 
@@ -122,22 +131,44 @@ const Dispensacaocomp = () => {
     }
 
     if (quantidade > selectedMed.quantity) {
-      toast.error(
-        `Quantidade indisponível. Estoque atual: ${selectedMed.quantity}`
-      );
+      toast.error(`Quantidade indisponível. Estoque atual: ${selectedMed.quantity}`);
       return;
     }
 
-    const novaQuantidade = selectedMed.quantity - quantidade;
+    const userData = getUserData();
+    if (!userData.id || !userData.token) {
+      toast.error("Usuário não identificado. Faça login novamente.");
+      return;
+    }
 
     try {
-      // Atualiza o lote no servidor
-      const response = await fetch(
+      const dispensacaoResponse = await fetch("http://localhost:5000/dispensacao", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${userData.token}`,
+        },
+        body: JSON.stringify({
+          paciente_cpf: cpfPaciente,
+          medicamento_id: selectedMed.medicamentoId || selectedMed.id,
+          lote_id: selectedMed.lote_id,
+          quantidade_dispensada: quantidade,
+          data_hora: new Date().toISOString(),
+        }),
+      });
+
+      if (!dispensacaoResponse.ok) {
+        throw new Error("Falha ao registrar dispensação");
+      }
+
+      const novaQuantidade = selectedMed.quantity - quantidade;
+      const updateResponse = await fetch(
         `http://localhost:5000/lotes/${selectedMed.id}`,
         {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
+            Authorization: `Bearer ${userData.token}`,
           },
           body: JSON.stringify({
             ...selectedMed,
@@ -146,48 +177,7 @@ const Dispensacaocomp = () => {
         }
       );
 
-      if (response.ok) {
-        // Cria o registro de histórico
-        const novoRegistro = {
-          id: Date.now(),
-          medicamento: selectedMed.medicationName,
-          lote: selectedMed.number,
-          quantidade: quantidade,
-          paciente: dispensadoPor,
-          cartaoSus: cartaoSus,
-          data: new Date().toISOString(),
-          medicamentoId: selectedMed.id,
-          gramas: selectedMed.grams,
-          dispensadoPor: getUserLogged(), // Pega o nome do usuário logado
-          codigo: `DISP-${Date.now()}`, // Código único para o registro
-        };
-
-        // Tenta salvar no histórico e usa fallback local se falhar
-        try {
-          const historicoResponse = await fetch(
-            "http://localhost:5000/historicos",
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify(novoRegistro),
-            }
-          );
-
-          if (!historicoResponse.ok) {
-            console.warn("Falha ao salvar no histórico, usando fallback local");
-            setHistorico((prev) => [...prev, novoRegistro]);
-          }
-        } catch (historicoError) {
-          console.warn(
-            "Erro ao acessar /historico, usando fallback:",
-            historicoError
-          );
-          setHistorico((prev) => [...prev, novoRegistro]);
-        }
-
-        // Atualiza o estado diretamente
+      if (updateResponse.ok) {
         setMedicamentos((prev) =>
           prev.map((item) =>
             item.id === selectedMed.id
@@ -196,32 +186,25 @@ const Dispensacaocomp = () => {
           )
         );
 
-        // Exibe o toast com a mensagem de sucesso diretamente
-        const userName = getUserLogged(); // Obtém o nome do usuário logado
-        const successMessage = `${quantidade} unidade(s) de ${selectedMed.medicationName} dispensada(s) para ${dispensadoPor} por ${userName}.`;
-
-        toast.success(successMessage, {
-          autoClose: 10000, // Define o tempo para o toast fechar (10 segundos)
-        });
+        toast.success(
+          `${quantidade} unidade(s) de ${selectedMed.medicationName} dispensada(s) para ${nomePaciente} por ${userData.name}.`,
+          { autoClose: 10000 }
+        );
 
         setShowModal(false);
-        setDispensadoPor("");
-        setCartaoSus("");
+        setNomePaciente("");
+        setCpfPaciente("");
       } else {
-        toast.error("Erro ao dispensar medicamento.");
+        throw new Error("Falha ao atualizar estoque");
       }
     } catch (error) {
-      toast.error("Erro ao dispensar medicamento.");
-      console.error("Detalhes do erro:", error);
+      console.error("Erro na dispensação:", error);
+      toast.error("Erro ao completar a dispensação. Tente novamente.");
     }
   };
 
   const ImagemMedicamento = ({ src, alt }) => {
     const [imageSrc, setImageSrc] = useState(src);
-
-    if (quantidade <= 0) {
-      return null;
-    }
 
     return (
       <div style={styles.medImageContainer}>
@@ -239,13 +222,6 @@ const Dispensacaocomp = () => {
     <div style={styles.container}>
       <h1 style={styles.title}>Dispensação de Medicamentos</h1>
 
-      {successMsg && (
-        <div style={styles.successMessage}>
-          <h4>Sucesso</h4>
-          <p>{successMsg}</p>
-        </div>
-      )}
-
       {noPatients && (
         <div style={styles.noPatientsAlert}>
           <h4>Nenhum paciente cadastrado no sistema</h4>
@@ -261,28 +237,14 @@ const Dispensacaocomp = () => {
             <div key={med.id} style={styles.medCard}>
               <h3 style={styles.medTitle}>{med.medicationName}</h3>
 
-              <ImagemMedicamento
-                src={med.imageUrl}
-                alt={med.medicationName}
-                quantidade={med.quantity}
-              />
+              <ImagemMedicamento src={med.imageUrl} alt={med.medicationName} />
 
               <div style={styles.medInfo}>
-                <p>
-                  <strong>Lote de Farmacia:</strong> {med.number}
-                </p>
-                <p>
-                  <strong>Fabricante:</strong> {med.manufacturer}
-                </p>
-                <p>
-                  <strong>Validade:</strong> {med.expirationDate}
-                </p>
-                <p>
-                  <strong>Estoque:</strong> {med.quantity} unidade(s)
-                </p>
-                <p>
-                  <strong>Gramas:</strong> {med.grams || "N/A"}
-                </p>
+                <p><strong>Lote de Farmácia:</strong> {med.number}</p>
+                <p><strong>Fabricante:</strong> {med.manufacturer}</p>
+                <p><strong>Validade:</strong> {med.expirationDate}</p>
+                <p><strong>Estoque:</strong> {med.quantity} unidade(s)</p>
+                <p><strong>Gramas:</strong> {med.grams || "N/A"}</p>
               </div>
 
               <div style={styles.medFooter}>
@@ -299,35 +261,23 @@ const Dispensacaocomp = () => {
           ))}
         </div>
       )}
-      <hr style={styles.hr} />
 
       <Modal show={showModal} onHide={() => setShowModal(false)}>
         <Modal.Header closeButton style={styles.modalHeader}>
           <div style={styles.modalTitleContainer}>
             <img src="/images/pill.png" alt="Pílula" style={styles.pillIcon} />
           </div>
-          <Modal.Title style={styles.modaltitle}>
-            Dispensar Medicamento
-          </Modal.Title>
+          <Modal.Title style={styles.modaltitle}>Dispensar Medicamento</Modal.Title>
         </Modal.Header>
         <Modal.Body style={styles.modalBody}>
           {selectedMed && (
             <>
-              <p>
-                <strong>Medicamento:</strong> {selectedMed.medicationName}
-              </p>
-              <p>
-                <strong>Lote de Farmacia:</strong> {selectedMed.number}
-              </p>
-              <p>
-                <strong>Estoque disponível:</strong> {selectedMed.quantity}{" "}
-                unidades
-              </p>
+              <p><strong>Medicamento:</strong> {selectedMed.medicationName}</p>
+              <p><strong>Lote de Farmácia:</strong> {selectedMed.number}</p>
+              <p><strong>Estoque disponível:</strong> {selectedMed.quantity} unidades</p>
 
               <Form.Group controlId="quantidade" style={styles.formGroup}>
-                <Form.Label style={styles.formLabel}>
-                  Quantidade a dispensar
-                </Form.Label>
+                <Form.Label style={styles.formLabel}>Quantidade a dispensar</Form.Label>
                 <Form.Control
                   type="number"
                   value={quantidade}
@@ -341,25 +291,23 @@ const Dispensacaocomp = () => {
                 />
               </Form.Group>
 
-              <Form.Group controlId="cartaoSus" style={styles.formGroup}>
-                <Form.Label style={styles.formLabel}>
-                  CPF ou Cartão do SUS
-                </Form.Label>
+              <Form.Group controlId="cpfPaciente" style={styles.formGroup}>
+                <Form.Label style={styles.formLabel}>CPF do Paciente</Form.Label>
                 <Form.Control
                   type="text"
-                  value={cartaoSus}
+                  value={cpfPaciente}
                   onChange={handlePacienteChange}
-                  placeholder="Digite o CPF ou Cartão do SUS"
+                  placeholder="Digite o CPF do paciente"
                   style={styles.formControl}
                   required
                 />
               </Form.Group>
 
-              <Form.Group controlId="paciente" style={styles.formGroup}>
+              <Form.Group controlId="nomePaciente" style={styles.formGroup}>
                 <Form.Label style={styles.formLabel}>Paciente</Form.Label>
                 <Form.Control
                   type="text"
-                  value={dispensadoPor}
+                  value={nomePaciente}
                   readOnly
                   style={styles.formControl}
                 />
@@ -368,20 +316,12 @@ const Dispensacaocomp = () => {
           )}
         </Modal.Body>
         <Modal.Footer style={styles.modalFooter}>
-          <Button variant="secondary" onClick={() => setShowModal(false)}>
-            Cancelar
-          </Button>
-          <Button variant="primary" onClick={confirmarDispensacao}>
-            Confirmar
-          </Button>
+          <Button variant="secondary" onClick={() => setShowModal(false)}>Cancelar</Button>
+          <Button variant="primary" onClick={confirmarDispensacao}>Confirmar</Button>
         </Modal.Footer>
       </Modal>
 
-      <ToastContainer
-        position="top-right"
-        autoClose={5000}
-        hideProgressBar={false}
-      />
+      <ToastContainer position="top-right" autoClose={5000} hideProgressBar={false} />
     </div>
   );
 };
@@ -389,18 +329,10 @@ const Dispensacaocomp = () => {
 export default Dispensacaocomp;
 
 const styles = {
-  body: {
-    fontFamily: "'Arial', sans-serif",
-    backgroundColor: "#f4f5f7",
-    color: "#333",
-    margin: 0,
-    padding: 0,
-  },
-
-   pillIcon: {
-    width: '30px',  // Tamanho da imagem da pílula
-    marginRight: '10px',  // Espaçamento entre a imagem e o título
-    alignSelf: 'center',
+  pillIcon: {
+    width: "30px",
+    marginRight: "10px",
+    alignSelf: "center",
   },
   container: {
     maxWidth: "1200px",
@@ -464,18 +396,6 @@ const styles = {
     fontSize: "0.95rem",
     width: "100%",
   },
-  successMessage: {
-    backgroundColor: "#d4edda",
-    color: "#155724",
-    padding: "15px",
-    borderRadius: "8px",
-    marginTop: "20px",
-  },
-  hr: {
-    margin: "25px 0",
-    border: 0,
-    borderTop: "1px solid #eee",
-  },
   modalHeader: {
     backgroundColor: "#007bff",
     color: "white",
@@ -502,12 +422,6 @@ const styles = {
     borderRadius: "4px",
     padding: "8px 12px",
     width: "100%",
-  },
-  logo: {
-    width: "25px",
-    position: "relative",
-    left: "-290px",
-    top: "-2px",
   },
   modaltitle: {
     position: "relative",

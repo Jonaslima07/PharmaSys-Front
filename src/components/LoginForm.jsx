@@ -36,7 +36,6 @@ const LoginForm = () => {
       throw new Error(data.mensagem || "Erro ao fazer login");
     }
 
-    // Verifica se email está confirmado no login manual
     if (!data.user.emailConfirmed) {
       throw new Error("Email não confirmado. Por favor, confirme seu email antes de entrar.");
     }
@@ -56,7 +55,10 @@ const LoginForm = () => {
 
     try {
       const data = await handleLogin(email, password);
-      localStorage.setItem("userData", JSON.stringify({ token: data.token, user: data.user }));
+
+    
+      localStorage.setItem("userData", JSON.stringify({ token: data.access_token, user: data.user }));
+
       showToast("Login realizado com sucesso!", "success");
       setTimeout(() => navigate("/cadastropaciente"), 1500);
     } catch (error) {
@@ -91,7 +93,9 @@ const LoginForm = () => {
         return;
       }
 
-      localStorage.setItem("userData", JSON.stringify({ token: data.token, user: data.user }));
+      // Também corrigido para salvar o token vindo como access_token
+      localStorage.setItem("userData", JSON.stringify({ token: data.access_token, user: data.user }));
+
       showToast("Login via Google realizado com sucesso!", "success");
 
       setTimeout(() => {
@@ -199,7 +203,6 @@ const LoginForm = () => {
     </div>
   );
 };
-
 
 const styles = {
   authContainer: {
