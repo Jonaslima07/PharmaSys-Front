@@ -3,7 +3,15 @@ import { Button, Modal, Form, Alert } from "react-bootstrap";
 import { useNavigate, useParams } from "react-router-dom";
 import PesquisaPaciente from "./PesquisaPaciente";
 import { ToastContainer, toast } from "react-toastify";
-import { Edit2, Trash2, User, CreditCard, FileText, Phone, MapPin } from "lucide-react";
+import {
+  Edit2,
+  Trash2,
+  User,
+  CreditCard,
+  FileText,
+  Phone,
+  MapPin,
+} from "lucide-react";
 
 const CadastrarPaciente = () => {
   const [pacientes, setPacientes] = useState([]);
@@ -15,16 +23,22 @@ const CadastrarPaciente = () => {
     rg: "",
     cpf: "",
     telefone: "",
-    endereco: "",
+    rua: "",
+    numero: "",
+    bairro: "",
   });
+
   const [formErrors, setFormErrors] = useState({
     nome: false,
     cartao_sus: false,
     rg: false,
     cpf: false,
     telefone: false,
-    endereco: false,
+    rua: false,
+    numero: false,
+    bairro: false,
   });
+
   const [modalVisible, setModalVisible] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const pacienteRefs = useRef({});
@@ -33,15 +47,22 @@ const CadastrarPaciente = () => {
   const [originalPaciente, setOriginalPaciente] = useState(null);
 
 
+  const isEmpty = (value) => !value || !value.trim();
+
   const getToken = () => {
     const userDataString = localStorage.getItem("userData");
     if (userDataString) {
       try {
         const userData = JSON.parse(userDataString);
-        if (userData.token) return userData.token;
-      } catch { /* empty */ }
+        if (userData && userData.token) {
+          return userData.token;
+        }
+      } catch (error) {
+        console.error("Erro ao parsear userData:", error);
+      }
     }
-    return localStorage.getItem("token") || null;
+    navigate("/login");
+    return null;
   };
 
   useEffect(() => {
@@ -64,52 +85,60 @@ const CadastrarPaciente = () => {
       return;
     }
 
-    const response = await fetch("http://localhost:5000/pacientes", {
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-    });
+    try {
+      const response = await fetch("http://localhost:5000/pacientes", {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      if (response.status === 401 && errorText.includes("expired")) {
-        localStorage.removeItem("userData");
-        alert("Sua sessão expirou. Faça login novamente.");
-        navigate("/login");
-        return;
+      if (!response.ok) {
+        if (response.status === 401) {
+          localStorage.removeItem("userData");
+          navigate("/login");
+          return;
+        }
+        const errorData = await response.json();
+        throw new Error(errorData.msg || "Erro ao buscar pacientes");
       }
-      throw new Error(`Erro ao buscar pacientes: ${errorText}`);
-    }
 
-    const data = await response.json();
-    setPacientes(data);
-    setFilteredPacientes(data);
+      const data = await response.json();
+      setPacientes(data);
+      setFilteredPacientes(data);
+    } catch (error) {
+      console.error("Erro ao carregar pacientes:", error);
+      toast.error(error.message);
+    }
   };
 
   const loadPaciente = async (id) => {
-  const token = getToken();
-  if (!token) {
-    alert("Token JWT não encontrado");
-    return;
-  }
+    const token = getToken();
+    if (!token) {
+      navigate("/login");
+      return;
+    }
 
-  const response = await fetch(`http://localhost:5000/pacientes/${id}`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+    try {
+      const response = await fetch(`http://localhost:5000/pacientes/${id}`, {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
-  if (!response.ok) {
-    alert("Erro ao carregar o paciente");
-    return;
-  }
+      if (!response.ok) {
+        throw new Error("Erro ao carregar paciente");
+      }
 
-  const data = await response.json();
-  setFormData(data);
-  setEditMode(true);  // ✅ aqui também precisa garantir que editMode está true
-  setOriginalPaciente(data);
-  setModalVisible(true);
-};
-
+      const data = await response.json();
+      setFormData(data);
+      setOriginalPaciente(data);
+    } catch (error) {
+      console.error("Erro ao carregar paciente:", error);
+      toast.error(error.message);
+    }
+  };
 
   const savePaciente = async (paciente) => {
     const token = getToken();
@@ -140,54 +169,56 @@ const CadastrarPaciente = () => {
     resetForm();
   };
 
- const editPaciente = async (paciente) => {
-  const token = getToken();
-  if (!token) {
-    alert("Token JWT não encontrado");
-    return;
-  }
+  const editPaciente = async (paciente) => {
+    const token = getToken();
+    if (!token) {
+      alert("Token JWT não encontrado");
+      return;
+    }
 
-  const pacienteData = getChangedFields();  // Só campos alterados
+    const pacienteData = getChangedFields();
 
-  if (Object.keys(pacienteData).length === 0) {
-    toast.info("Nenhuma alteração detectada.");
-    return;
-  }
+    if (Object.keys(pacienteData).length === 0) {
+      toast.info("Nenhuma alteração detectada.");
+      return;
+    }
 
-  const response = await fetch(`http://localhost:5000/pacientes/${paciente.id}`, {
-    method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify(pacienteData),
-  });
+    const response = await fetch(
+      `http://localhost:5000/pacientes/${paciente.id}`,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(pacienteData),
+      }
+    );
 
-  const result = await response.json();
+    const result = await response.json();
 
-  if (!response.ok) {
-    console.error("Erro:", result);
-    toast.error(result.erro || "Erro ao editar paciente");
-    throw new Error(result.erro || "Erro ao editar paciente");
-  }
+    if (!response.ok) {
+      console.error("Erro:", result);
+      toast.error(result.erro || "Erro ao editar paciente");
+      throw new Error(result.erro || "Erro ao editar paciente");
+    }
 
-  toast.success("Paciente editado com sucesso!");
-  await loadPacientes();
-  resetForm();
-};
+    toast.success("Paciente editado com sucesso!");
+    await loadPacientes();
+    resetForm();
+  };
 
   const getChangedFields = () => {
-  if (!originalPaciente) return formData; // sem original, envia tudo (novo cadastro)
+    if (!originalPaciente) return formData;
 
-  const changed = {};
-  for (const key in formData) {
-    if (formData[key] !== originalPaciente[key]) {
-      changed[key] = formData[key];
+    const changed = {};
+    for (const key in formData) {
+      if (formData[key] !== originalPaciente[key]) {
+        changed[key] = formData[key];
+      }
     }
-  }
-  return changed;
-};
-
+    return changed;
+  };
 
   const extractPacienteData = (paciente) => ({
     nome: paciente.nome,
@@ -195,7 +226,9 @@ const CadastrarPaciente = () => {
     rg: paciente.rg,
     cpf: paciente.cpf,
     telefone: paciente.telefone,
-    endereco: paciente.endereco,
+    rua: paciente.rua,
+    numero: paciente.numero,
+    bairro: paciente.bairro,
   });
 
   const deletePaciente = async (id) => {
@@ -223,69 +256,99 @@ const CadastrarPaciente = () => {
 
   const handleInputChange = (name, value) => {
     let processedValue = value;
-    if (name === "cpf") processedValue = value.replace(/\D/g, "").slice(0, 11);
+
+    if (["cpf", "rg", "cartao_sus", "telefone", "numero"].includes(name)) {
+      processedValue = value.replace(/\D/g, "");
+    }
+
+    if (["nome", "rua", "bairro"].includes(name)) {
+      processedValue = value.replace(/[0-9]/g, "").trim();
+    }
+
     setFormData({ ...formData, [name]: processedValue });
   };
 
   const handleAddPaciente = async () => {
-  const errors = {
-    nome: !formData.nome,
-    cartao_sus: !/^\d{15}$/.test(formData.cartao_sus),
-    rg: !/^\d{10}$/.test(formData.rg),
-    cpf: !/^\d{11}$/.test(formData.cpf),
-    telefone: !/^\d{10,11}$/.test(formData.telefone),
-    endereco: !formData.endereco,
+    const errors = {
+      nome: isEmpty(formData.nome) || formData.nome.trim().length < 3 || !/^[A-Za-zÀ-ÖØ-öø-ÿ\s]+$/.test(formData.nome.trim()),
+      cartao_sus: isEmpty(formData.cartao_sus) || !/^\d{15}$/.test(formData.cartao_sus),
+      rg: isEmpty(formData.rg) || !/^\d{7,10}$/.test(formData.rg),
+      cpf: isEmpty(formData.cpf) || !/^\d{11}$/.test(formData.cpf),
+      telefone: isEmpty(formData.telefone) || !/^\d{10,11}$/.test(formData.telefone),
+      rua: isEmpty(formData.rua) || formData.rua.trim().length < 3,
+      numero: isEmpty(formData.numero),
+      bairro: isEmpty(formData.bairro) || formData.bairro.trim().length < 3,
+    };
+
+    setFormErrors(errors);
+
+    if (Object.values(errors).includes(true)) {
+      toast.error("Por favor, preencha todos os campos corretamente!");
+      return;
+    }
+
+    try {
+      if (formData.id) {
+        await editPaciente(formData);
+      } else {
+        await savePaciente(formData);
+      }
+    } catch (error) {
+      console.error(error.message);
+      toast.error(error.message);
+    }
   };
 
-  setFormErrors(errors);
-
-  if (Object.values(errors).includes(true)) {
-    alert("Por favor, preencha todos os campos corretamente!");
-    return;
-  }
-
-  try {
-    // Decisão segura: se tem ID -> editar (PUT), se não tem -> criar (POST)
-    if (formData.id) {
-      await editPaciente(formData);  // PUT
-    } else {
-      await savePaciente(formData);  // POST
-    }
-  } catch (error) {
-    console.error(error.message);
-    toast.error(error.message);
-    alert(error.message);
-  }
-};
-
-
   const resetForm = () => {
-    setFormData({ id: null, nome: "", cartao_sus: "", rg: "", cpf: "", telefone: "", endereco: "" });
+    setFormData({
+      id: null,
+      nome: "",
+      cartao_sus: "",
+      rg: "",
+      cpf: "",
+      telefone: "",
+      rua: "",
+      numero: "",
+      bairro: "",
+    });
     setModalVisible(false);
     setEditMode(false);
-    setFormErrors({ nome: false, cartao_sus: false, rg: false, cpf: false, telefone: false, endereco: false });
+    setFormErrors({
+      nome: false,
+      cartao_sus: false,
+      rg: false,
+      cpf: false,
+      telefone: false,
+      rua: false,
+      numero: false,
+      bairro: false,
+    });
   };
 
   const openModal = (paciente) => {
-  if (paciente) {
-    setFormData(paciente);
-    setEditMode(true);
-  } else {
-    resetForm();  // Isso já garante editMode false e limpa os dados
-  }
-  setModalVisible(true);
-};
+    if (paciente) {
+      setFormData(paciente);
+      setEditMode(true);
+    } else {
+      resetForm();
+    }
+    setModalVisible(true);
+  };
 
   const handleSelectPaciente = (paciente) => {
     setFormData(paciente);
     if (pacienteRefs.current[paciente.id]) {
-      pacienteRefs.current[paciente.id].scrollIntoView({ behavior: "smooth", block: "start" });
+      pacienteRefs.current[paciente.id].scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
     }
   };
 
   const handleSearch = (searchTerm) => {
     const filtered = pacientes.filter(
-      (paciente) => paciente.cpf.includes(searchTerm) || paciente.rg.includes(searchTerm)
+      (paciente) =>
+        paciente.cpf.includes(searchTerm) || paciente.rg.includes(searchTerm)
     );
     setFilteredPacientes(filtered);
   };
@@ -302,7 +365,7 @@ const CadastrarPaciente = () => {
 
     const handleDelete = (e) => {
       e.stopPropagation();
-      if (onDelete) {
+      if (window.confirm("Tem certeza que deseja excluir este paciente?")) {
         onDelete(patient.id);
       }
     };
@@ -318,7 +381,6 @@ const CadastrarPaciente = () => {
         onMouseLeave={() => setIsHovered(false)}
         ref={(el) => (pacienteRefs.current[patient.id] = el)}
       >
-        {/* Header com nome do paciente */}
         <div style={styles.cardHeader}>
           <div style={styles.iconContainer}>
             <User color="#0066cc" size={20} />
@@ -328,11 +390,8 @@ const CadastrarPaciente = () => {
           </div>
         </div>
 
-        {/* Scrollable Content */}
         <div style={styles.scrollableContent}>
-          {/* Informações do paciente em duas colunas */}
           <div style={styles.infoGrid}>
-            {/* Coluna 1 */}
             <div>
               <div style={styles.infoItem}>
                 <CreditCard style={styles.icon} size={16} />
@@ -348,12 +407,13 @@ const CadastrarPaciente = () => {
                 <FileText style={styles.icon} size={16} />
                 <div style={styles.infoContent}>
                   <div style={styles.label}>Identidade (RG):</div>
-                  <div style={styles.value}>{patient.rg || "Não informado"}</div>
+                  <div style={styles.value}>
+                    {patient.rg || "Não informado"}
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Coluna 2 */}
             <div>
               <div style={styles.infoItem}>
                 <FileText style={styles.icon} size={16} />
@@ -376,7 +436,7 @@ const CadastrarPaciente = () => {
                 <div style={styles.infoContent}>
                   <div style={styles.label}>Endereço:</div>
                   <div style={{ ...styles.value, ...styles.addressValue }}>
-                    {patient.endereco}
+                    {patient.rua}, {patient.numero} - {patient.bairro}
                   </div>
                 </div>
               </div>
@@ -384,7 +444,6 @@ const CadastrarPaciente = () => {
           </div>
         </div>
 
-        {/* Ações (somente editar e excluir) */}
         <div
           style={{
             ...styles.actionButtons,
@@ -421,7 +480,7 @@ const CadastrarPaciente = () => {
       />
       <ToastContainer
         position="top-right"
-        autoClose={3000}
+        autoClose={5000}
         hideProgressBar={false}
         newestOnTop={false}
         closeOnClick
@@ -492,6 +551,18 @@ const CadastrarPaciente = () => {
                 onChange={(e) => handleInputChange("nome", e.target.value)}
                 isInvalid={formErrors.nome}
               />
+              {formErrors.nome && (
+                <Form.Control.Feedback
+                  type="invalid"
+                  style={{
+                    marginTop: "-16px",
+                    fontSize: "14px",
+                    color: "#dc3545",
+                  }}
+                >
+                  O nome é obrigatório e deve conter no mínimo 3 letras.
+                </Form.Control.Feedback>
+              )}
             </Form.Group>
 
             <Form.Group className="mb-3" controlId="numeroCartaoSUS">
@@ -541,61 +612,10 @@ const CadastrarPaciente = () => {
                     color: "#dc3545",
                   }}
                 >
-                  A identidade deve ter 10 dígitos numéricos.
+                  A identidade deve ter entre 7 e 10 dígitos numéricos.
                 </Form.Control.Feedback>
               )}
             </Form.Group>
-
-            {/* <Form.Group className="mb-3" controlId="medicamento">
-              <Form.Label style={{ color: "#000000" }}>Medicamento</Form.Label>
-              <Form.Control
-                type="text"
-                placeholder="Medicamento"
-                value={formData.medicamento}
-                onChange={(e) =>
-                  handleInputChange("medicamento", e.target.value)
-                }
-                isInvalid={formErrors.medicamento}
-              />
-              {formErrors.medicamento && (
-                <Form.Control.Feedback
-                  type="invalid"
-                  style={{
-                    marginTop: "-16px",
-                    fontSize: "14px",
-                    color: "#dc3545",
-                  }}
-                >
-                  O medicamento é obrigatório.
-                </Form.Control.Feedback>
-              )}
-            </Form.Group> */}
-
-            {/* <Form.Group className="mb-3" controlId="quantidade">
-              <Form.Label style={{ color: "#000000" }}>Quantidade</Form.Label>
-              <Form.Control
-                type="number"
-                min={1}
-                placeholder="Quantidade"
-                value={formData.quantidade}
-                onChange={(e) =>
-                  handleInputChange("quantidade", e.target.value)
-                }
-                isInvalid={formErrors.quantidade}
-              />
-              {formErrors.quantidade && (
-                <Form.Control.Feedback
-                  type="invalid"
-                  style={{
-                    marginTop: "-16px",
-                    fontSize: "14px",
-                    color: "#dc3545",
-                  }}
-                >
-                  A quantidade deve ser maior que zero.
-                </Form.Control.Feedback>
-              )}
-            </Form.Group> */}
 
             <Form.Group className="mb-3" controlId="cpf">
               <Form.Label style={{ color: "#000000" }}>CPF</Form.Label>
@@ -638,21 +658,21 @@ const CadastrarPaciente = () => {
                     color: "#dc3545",
                   }}
                 >
-                  O telefone deve ser válido.
+                  O telefone deve ter 10 ou 11 dígitos numéricos.
                 </Form.Control.Feedback>
               )}
             </Form.Group>
 
-            <Form.Group className="mb-3" controlId="endereco">
-              <Form.Label style={{ color: "#000000" }}>Endereço</Form.Label>
+            <Form.Group className="mb-3" controlId="rua">
+              <Form.Label style={{ color: "#000000" }}>Rua</Form.Label>
               <Form.Control
                 type="text"
-                placeholder="Endereço"
-                value={formData.endereco}
-                onChange={(e) => handleInputChange("endereco", e.target.value)}
-                isInvalid={formErrors.endereco}
+                placeholder="Rua"
+                value={formData.rua}
+                onChange={(e) => handleInputChange("rua", e.target.value)}
+                isInvalid={formErrors.rua}
               />
-              {formErrors.endereco && (
+              {formErrors.rua && (
                 <Form.Control.Feedback
                   type="invalid"
                   style={{
@@ -661,7 +681,53 @@ const CadastrarPaciente = () => {
                     color: "#dc3545",
                   }}
                 >
-                  O endereço é obrigatório.
+                  A rua é obrigatória e deve ter no mínimo 3 caracteres.
+                </Form.Control.Feedback>
+              )}
+            </Form.Group>
+
+            <Form.Group className="mb-3" controlId="numero">
+              <Form.Label style={{ color: "#000000" }}>Número</Form.Label>
+              <Form.Control
+                type="text"
+                placeholder="Número"
+                value={formData.numero}
+                onChange={(e) => handleInputChange("numero", e.target.value)}
+                isInvalid={formErrors.numero}
+              />
+              {formErrors.numero && (
+                <Form.Control.Feedback
+                  type="invalid"
+                  style={{
+                    marginTop: "-16px",
+                    fontSize: "14px",
+                    color: "#dc3545",
+                  }}
+                >
+                  O número é obrigatório.
+                </Form.Control.Feedback>
+              )}
+            </Form.Group>
+
+            <Form.Group className="mb-3" controlId="bairro">
+              <Form.Label style={{ color: "#000000" }}>Bairro</Form.Label>
+              <Form.Control
+                type="text"
+                placeholder="Bairro"
+                value={formData.bairro}
+                onChange={(e) => handleInputChange("bairro", e.target.value)}
+                isInvalid={formErrors.bairro}
+              />
+              {formErrors.bairro && (
+                <Form.Control.Feedback
+                  type="invalid"
+                  style={{
+                    marginTop: "-16px",
+                    fontSize: "14px",
+                    color: "#dc3545",
+                  }}
+                >
+                  O bairro é obrigatório e deve ter no mínimo 3 caracteres.
                 </Form.Control.Feedback>
               )}
             </Form.Group>
@@ -671,7 +737,11 @@ const CadastrarPaciente = () => {
           <Button
             variant="secondary"
             onClick={resetForm}
-            style={styles.cancelButton}
+            style={{
+              backgroundColor: "#dc3545",
+              borderColor: "#dc3545",
+              color: "white",
+            }}
           >
             Cancelar
           </Button>
@@ -682,7 +752,7 @@ const CadastrarPaciente = () => {
           >
             {editMode ? "Editar" : "Salvar"}
           </Button>
-          {editMode && (
+          {/* {editMode && (
             <Button
               variant="danger"
               onClick={() => deletePaciente(formData.id)}
@@ -693,13 +763,13 @@ const CadastrarPaciente = () => {
             >
               Deletar
             </Button>
-          )}
+          )} */}
         </Modal.Footer>
       </Modal>
     </div>
   );
 };
-// Constantes de estilo no final do arquivo
+
 const styles = {
   container: {
     padding: "20px",
@@ -707,13 +777,11 @@ const styles = {
     margin: "0 auto",
     backgroundColor: "#fff",
   },
-
   scrollableContent: {
-    maxHeight: "250px", // Definindo altura máxima para a área rolável
-    overflowY: "auto", // Permitindo rolagem vertical
-    paddingRight: "16px", // Espaçamento à direita, para não cobrir a rolagem
+    maxHeight: "250px",
+    overflowY: "auto",
+    paddingRight: "16px",
   },
-
   title: {
     fontSize: "22px",
     fontWeight: "bold",
@@ -738,7 +806,6 @@ const styles = {
     padding: "10px",
     borderRadius: "5px",
   },
-
   emptyText: {
     textAlign: "center",
     marginTop: "20px",
@@ -762,12 +829,12 @@ const styles = {
     boxShadow:
       "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
     marginBottom: "16px",
-    width: "380px", // Largura fixa para todos os cards
+    width: "380px",
     display: "flex",
     flexDirection: "column",
     justifyContent: "space-between",
     height: "100%",
-    overflow: "hidden", // Adicionado para garantir que nada ultrapasse o card
+    overflow: "hidden",
   },
   patientCardHover: {
     boxShadow:
@@ -784,7 +851,6 @@ const styles = {
     alignItems: "center",
     width: "100%",
   },
-
   iconContainer: {
     display: "flex",
     alignItems: "center",
@@ -796,10 +862,10 @@ const styles = {
     fontWeight: "bold",
     color: "#0066cc",
     lineHeight: "1.25",
-    whiteSpace: "nowrap", // Impede quebra de linha
-    overflow: "hidden", // Esconde o texto que ultrapassa
-    textOverflow: "ellipsis", // Adiciona "..." ao texto que ultrapassa o espaço
-    width: "100%", // Garante que o nome ocupe toda a largura disponível
+    whiteSpace: "nowrap",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    width: "100%",
   },
   infoGrid: {
     display: "grid",
@@ -816,19 +882,9 @@ const styles = {
     flex: 1,
     minWidth: 0,
   },
-  infoContent2: {
-  position: 'relative',
-  left: '-270px' // Isso empurra o conteúdo para fora da visualização
-},
   icon: {
     color: "#4b5563",
     marginTop: "2px",
-  },
-  icontext: {
-    color: "#4b5563",
-    marginTop: "2px",
-    position: "relative",
-    left: "-270px",
   },
   label: {
     fontSize: "0.875rem",
@@ -839,16 +895,14 @@ const styles = {
     fontSize: "0.875rem",
     color: "#0066cc",
     fontWeight: "600",
-    //whiteSpace: "nowrap",
-    overflow: "hidden", // Esconde o texto que ultrapassa. remover aqui caso queira tirar os 3 pontinhos
-    textOverflow: "ellipsis", // Adiciona "..." ao texto que ultrapassa o espaço,remover aqui caso queira tirar os 3 pontinhos
+    overflow: "hidden",
+    textOverflow: "ellipsis",
     width: "100%",
-    whiteSpace: "normal", // Permite quebra de linha para quantidade e medicamento
-    WebkitLineClamp: 1, // Limita a 1 linha para quantidade e medicamento
+    whiteSpace: "normal",
+    WebkitLineClamp: 1,
     WebkitBoxOrient: "vertical",
-    display: "-webkit-box", // Para que o WebkitLineClamp funcione corretamente
+    display: "-webkit-box",
   },
-
   monoValue: {
     display: "-webkit-box",
     fontSize: "0.875rem",
@@ -857,19 +911,17 @@ const styles = {
     overflow: "hidden",
     textOverflow: "ellipsis",
     width: "100%",
-    whiteSpace: "normal", // Permite quebra de linha para endereço
-    WebkitLineClamp: 2, // Limita a 2 linhas para endereço
+    whiteSpace: "normal",
+    WebkitLineClamp: 2,
     WebkitBoxOrient: "vertical",
   },
-
   addressValue: {
     lineHeight: "1.5",
     display: "-webkit-box",
-    WebkitLineClamp: 5, // Limita a 2 linhas para endereço
+    WebkitLineClamp: 5,
     WebkitBoxOrient: "vertical",
-    whiteSpace: "normal", // Permite quebra de linha para endereço
+    whiteSpace: "normal",
   },
-
   actionButtons: {
     position: "absolute",
     top: "12px",
@@ -893,14 +945,6 @@ const styles = {
   deleteButton: {
     backgroundColor: "#fee2e2",
   },
-  hoverOverlay: {
-    position: "absolute",
-    inset: "0",
-    backgroundColor: "rgba(219, 234, 254, 0.3)",
-    borderRadius: "8px",
-    pointerEvents: "none",
-  },
-  // Estilos do Modal
   modal: {
     backgroundColor: "rgba(0,0,0,0.5)",
   },
@@ -927,8 +971,9 @@ const styles = {
     borderRadius: "8px",
   },
   cancelButton: {
-    backgroundColor: "#6c757d",
-    border: "none",
+    backgroundColor: "#dc3545",
+    borderColor: "#dc3545",
+    color: "white",
   },
   saveButton: {
     backgroundColor: "#007bff",

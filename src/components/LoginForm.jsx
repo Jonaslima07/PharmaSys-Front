@@ -24,25 +24,29 @@ const LoginForm = () => {
   };
 
   const handleLogin = async (email, password) => {
-    const response = await fetch("http://localhost:5000/auth/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-    });
+  const response = await fetch("http://localhost:5000/auth/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+  });
 
-    const data = await response.json();
+  const data = await response.json();
 
-    if (!response.ok) {
-      throw new Error(data.mensagem || "Erro ao fazer login");
-    }
+  if (!response.ok) {
+    throw new Error(data.mensagem || "Erro ao fazer login");
+  }
 
-    if (!data.user.emailConfirmed) {
-      throw new Error("Email não confirmado. Por favor, confirme seu email antes de entrar.");
-    }
+  // Verifica se a resposta tem a estrutura esperada
+  if (!data.access_token || !data.user) {
+    throw new Error("Resposta do servidor inválida");
+  }
 
-    return data;
-  };
+  if (!data.user.emailConfirmed) {
+    throw new Error("Email não confirmado...");
+  }
 
+  return data;
+};
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -55,6 +59,7 @@ const LoginForm = () => {
 
     try {
       const data = await handleLogin(email, password);
+      console.log("Resposta do backend:", data);
 
     
       localStorage.setItem("userData", JSON.stringify({ token: data.access_token, user: data.user }));

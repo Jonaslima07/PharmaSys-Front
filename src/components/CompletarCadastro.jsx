@@ -36,13 +36,9 @@ const CompletarCadastro = () => {
 
     const verificarCadastro = async () => {
       try {
-        const response = await fetch(`http://localhost:5000/usuarios/verificar-cadastro?email=${encodeURIComponent(email)}`, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`,
-          },
-        });
+        const response = await fetch(
+          `http://localhost:5000/usuarios/verificar-cadastro?email=${encodeURIComponent(email)}`
+        );
 
         const data = await response.json();
         console.log("Verificação de cadastro:", data);
@@ -119,7 +115,9 @@ const CompletarCadastro = () => {
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          ...formData,
+          phone,
+          crf,
+          birthDate,
           password,
         }),
       });
@@ -239,8 +237,6 @@ const CompletarCadastro = () => {
     </div>
   );
 };
-
-
 
 const styles = {
   container: {

@@ -53,6 +53,7 @@ const LotesRecebidos = () => {
   const [loteId, setLoteId] = useState(null);
   const [excluindo, setExcluindo] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [forceReload, setForceReload] = useState(false);
 
   const calculateStatus = (dataValidade) => {
     if (!dataValidade) return "A vencer";
@@ -122,7 +123,7 @@ const LotesRecebidos = () => {
           return;
         }
 
-        const response = await fetch("http://localhost:5000/batch", {
+        const response = await fetch("http://localhost:5000/lotes", {
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
@@ -142,7 +143,7 @@ const LotesRecebidos = () => {
     };
 
     fetchLotes();
-  }, []);
+  }, [forceReload]);
 
   const lotesFiltrados = lotes.filter((lote) => {
     try {
@@ -225,32 +226,55 @@ const LotesRecebidos = () => {
     return true;
   };
 
-  const handleSaveLote = (novoLote) => {
-    if (!validarFormulario()) return;
-    const statusCalculado = calculateStatus(novoLote.dataValidade);
-    const loteComStatus = {
-      ...novoLote,
-      statusLote: statusCalculado,
-      gramas: novoLote.gramas,
-    };
-
-    if (loteEditando) {
-      setLotes((prev) =>
-        prev.map((lote) =>
-          lote.id === loteComStatus.id ? loteComStatus : lote
-        )
-      );
-      toast.success("Lote atualizado com sucesso!");
-    } else {
-      setLotes((prev) => [...prev, loteComStatus]);
-      toast.success("Lote cadastrado com sucesso!");
+  const handleSaveLote = async (novoLote) => {
+  // Remove a validação duplicada (já feita no LoteForm)
+  // Apenas prepara os dados e faz a chamada à API
+  
+  try {
+    const userData = JSON.parse(localStorage.getItem("userData"));
+    const token = userData?.token;
+    
+    if (!token) {
+      toast.error("Sessão expirada. Faça login novamente.");
+      return;
     }
 
+    const method = loteEditando ? "PUT" : "POST";
+    const url = loteEditando 
+      ? `http://localhost:5000/lotes/${novoLote.id}` 
+      : "http://localhost:5000/lotes";
+
+    const response = await fetch(url, {
+      method,
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`,
+      },
+      body: JSON.stringify(novoLote),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Erro ao salvar lote");
+    }
+
+    const data = await response.json();
+    setForceReload(prev => !prev); // Força atualização da lista
+    
+    toast.success(
+      loteEditando 
+        ? "Lote atualizado com sucesso!" 
+        : "Lote cadastrado com sucesso!"
+    );
+    
     setDialogAberto(false);
     setLoteEditando(null);
-    initializeFormData();
-  };
-
+    
+  } catch (error) {
+    console.error("Erro ao salvar lote:", error);
+    toast.error(error.message || "Falha ao salvar lote");
+  }
+};
   const editarLote = (lote) => {
     setLoteEditando(lote);
     setFormData(lote);
@@ -281,7 +305,7 @@ const LotesRecebidos = () => {
         return;
       }
 
-      const response = await fetch(`http://localhost:5000/batch/${id}`, {
+      const response = await fetch(`http://localhost:5000/lotes/${id}`, {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",
@@ -291,7 +315,8 @@ const LotesRecebidos = () => {
 
       if (!response.ok) throw new Error("Erro ao excluir lote");
 
-      setLotes(lotes.filter((lote) => lote.id !== id));
+      // Atualiza a lista após exclusão
+      setForceReload(prev => !prev);
       toast.success("Lote excluído com sucesso!");
     } catch (error) {
       console.error("Erro ao excluir lote:", error);

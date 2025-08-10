@@ -1,9 +1,10 @@
+
 import React, { useState, useEffect } from 'react';
 import { FaEdit, FaTrashAlt, FaCheck, FaPlus } from 'react-icons/fa';
-import BatchForm from './BatchForm';
-import './BatchList.css';
+import MedicamentosForm from './medicamentosForm';
+import './MedicamentosList.css';
 
-const BatchList = () => {
+const MedicamentosList = () => {
   const [batches, setBatches] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [showForm, setShowForm] = useState(false);
@@ -36,12 +37,8 @@ const BatchList = () => {
     return;
   }
 
-  // resto do código...
-
-
-
     try {
-      const response = await fetch('http://localhost:5000/lotes', {
+      const response = await fetch('http://localhost:5000/medicamentos', {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -65,12 +62,12 @@ const BatchList = () => {
 
       const data = await response.json();
 
-      // Filtra apenas lotes ativos (quantity > 0)
+      // Filtra apenas medicamentos ativos (quantity > 0)
       const activeBatches = data.filter(batch => batch.quantity > 0);
       setBatches(activeBatches);
     } catch (error) {
-      console.error('Erro ao carregar os lotes:', error);
-      setError('Erro ao carregar os lotes. Tente novamente mais tarde.');
+      console.error('Erro ao carregar os medicamentos:', error);
+      setError('Erro ao carregar os medicamentos. Tente novamente mais tarde.');
     } finally {
       setIsLoading(false);
     }
@@ -103,7 +100,7 @@ const BatchList = () => {
     }
 
     try {
-      // Ajusta as datas para evitar problemas de timezone
+      
       const adjustedBatchData = {
         ...batchData,
         expirationDate: batchData.expirationDate
@@ -118,8 +115,8 @@ const BatchList = () => {
       };
 
       const url = batchData.id
-        ? `http://localhost:5000/lotes/${batchData.id}`
-        : 'http://localhost:5000/lotes';
+        ? `http://localhost:5000/medicamentos/${batchData.id}`
+        : 'http://localhost:5000/medicamentos';
 
       const method = batchData.id ? 'PUT' : 'POST';
 
@@ -148,8 +145,8 @@ const BatchList = () => {
 
       handleFormClose();
     } catch (error) {
-      console.error('Erro ao salvar o lote:', error);
-      alert('Erro ao salvar o lote. Tente novamente.');
+      console.error('Erro ao salvar o medicamento:', error);
+      alert('Erro ao salvar o medicamento. Tente novamente.');
     } finally {
       setIsLoading(false);
     }
@@ -168,7 +165,7 @@ const BatchList = () => {
   });
 
   const handleDelete = async (id) => {
-    if (window.confirm('Tem certeza que deseja excluir este lote permanentemente?')) {
+    if (window.confirm('Tem certeza que deseja excluir este medicamento permanentemente?')) {
       const token = getToken();
       if (!token) {
         alert("Token JWT não encontrado. Faça login novamente.");
@@ -177,7 +174,7 @@ const BatchList = () => {
       }
 
       try {
-        const response = await fetch(`http://localhost:5000/lotes/${id}`, {
+        const response = await fetch(`http://localhost:5000/medicamentos/${id}`, {
           method: 'DELETE',
           headers: {
             Authorization: `Bearer ${token}`,
@@ -200,8 +197,8 @@ const BatchList = () => {
 
         loadBatches();
       } catch (error) {
-        console.error('Erro ao excluir o lote:', error);
-        alert('Erro ao excluir o lote. Tente novamente.');
+        console.error('Erro ao excluir o medicamento:', error);
+        alert('Erro ao excluir o medicamento. Tente novamente.');
       }
     }
   };
@@ -240,7 +237,7 @@ const BatchList = () => {
     return (
       <div className="loading-container">
         <div className="spinner"></div>
-        <p>Carregando lotes...</p>
+        <p>Carregando medicamentos...</p>
       </div>
     );
   }
@@ -267,18 +264,18 @@ const BatchList = () => {
         <div className="batch-actions">
           <input
             type="text"
-            placeholder="Buscar por lote de farmacia, ou codigo de compra..."
+            placeholder="Buscar por medicamento, lote de compra..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="search-input"
           />
           <button onClick={handleAddBatch} className="btn-add">
-            <FaPlus /> Novo Lote
+            <FaPlus /> Novo medicamento
           </button>
         </div>
 
         {showForm && (
-          <BatchForm
+          <MedicamentosForm
             batch={selectedBatch}
             onClose={handleFormClose}
             onSave={handleFormClose} // como no BatchForm o onSave chama loadBatches, aqui reutilizo handleFormClose
@@ -288,8 +285,8 @@ const BatchList = () => {
 
         {batches.length === 0 && !isLoading && !error && (
           <div className="empty-state">
-            <img src="/images/muiedacartela.jpg" alt="Nenhum lote cadastrado" />
-            <p>Nenhum lote cadastrado ainda. Clique em "Novo Lote" para começar!</p>
+            <img src="/images/muiedacartela.jpg" alt="Nenhum medicamento cadastrado" />
+            <p>Nenhum medicamento cadastrado ainda. Clique em "Novo medicamento" para começar!</p>
           </div>
         )}
 
@@ -299,8 +296,8 @@ const BatchList = () => {
               <thead>
                 <tr>
                   <th>Imagem</th>
-                  <th>Lote de Farmácia</th>
-                  <th>Lote de Compra</th>
+                  <th>medicamento de Farmácia</th>
+                  <th>medicamento de Compra</th>
                   <th>Medicamento</th>
                   <th>Fabricante</th>
                   <th>Validade</th>
@@ -375,7 +372,7 @@ const BatchList = () => {
             </table>
           ) : batches.length > 0 ? (
             <div className="no-results">
-              Nenhum lote encontrado para sua busca
+              Nenhum medicamento encontrado para sua busca
             </div>
           ) : null}
         </div>
@@ -384,4 +381,4 @@ const BatchList = () => {
   );
 };
 
-export default BatchList;
+export default MedicamentosList;

@@ -1,10 +1,10 @@
 import React from 'react';
-import BatchList from '../components/BatchList';
+import MedicamentosList from '../components/medicamentosList';
 
 const CadastroDlotes = () => {
   return (
   <>
-    <BatchList/>
+    <MedicamentosList/>
   </>
   );
 };

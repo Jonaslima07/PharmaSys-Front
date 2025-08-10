@@ -61,13 +61,13 @@ const HeaderLoggedIn = ({ onLogout }) => {
 
             <Nav.Link
               as={Link}
-              to="/historicomedicamentos"
+              to="/historicodisp"
               style={{ ...linkStyle, ...(hovered || clicked ? { color: '#78C2FF' } : {}) }}
               onMouseEnter={handleMouseEnter}
               onMouseLeave={handleMouseLeave}
               onClick={handleMouseClick}
             >
-              Histórico de Medicamentos
+              Histórico de dispensação
             </Nav.Link>
 
             <Nav.Link
@@ -103,7 +103,7 @@ const HeaderLoggedIn = ({ onLogout }) => {
               Cadastrar Medicamentos
             </Nav.Link>
 
-            {/* Só aparece para ADMINISTRADOR */}
+            {/* Só aparece para ADMINISTRADOR
             {role === 'administrador' && (
               <Nav.Link
                 as={Link}
@@ -115,7 +115,7 @@ const HeaderLoggedIn = ({ onLogout }) => {
               >
                 Cadastrar Usuários
               </Nav.Link>
-            )}
+            )} */}
 
             <Nav.Link
               as={Link}

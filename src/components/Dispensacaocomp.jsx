@@ -3,6 +3,7 @@ import { Button, Modal, Form } from "react-bootstrap";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
+
 const Dispensacaocomp = () => {
   const [medicamentos, setMedicamentos] = useState([]);
   const [selectedMed, setSelectedMed] = useState(null);
@@ -15,8 +16,21 @@ const Dispensacaocomp = () => {
   const [noPatients, setNoPatients] = useState(false);
 
   const getUserData = () => {
-    const userData = JSON.parse(localStorage.getItem("userData"));
-    return userData || { id: null, name: "Desconhecido", token: null };
+    const storedData = localStorage.getItem("userData");
+    if (!storedData) return { id: null, name: "Desconhecido", token: null };
+
+    try {
+      const parsedData = JSON.parse(storedData);
+      return {
+        id: parsedData.user?.id || null,
+        name: parsedData.user?.name || "Desconhecido",
+        token: parsedData.token || null,
+        role: parsedData.user?.role || null,
+      };
+    } catch (error) {
+      console.error("Erro ao parsear userData:", error);
+      return { id: null, name: "Desconhecido", token: null };
+    }
   };
 
   const getImageSource = (imageData) => {
@@ -34,6 +48,7 @@ const Dispensacaocomp = () => {
   };
 
   useEffect(() => {
+    console.log("Dados do usuário:", getUserData());
     const userData = getUserData();
 
     if (!userData.token) {
@@ -44,7 +59,7 @@ const Dispensacaocomp = () => {
     const fetchMedicamentos = async () => {
       setIsLoading(true);
       try {
-        const response = await fetch("http://localhost:5000/lotes", {
+        const response = await fetch("http://localhost:5000/medicamentos", {
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${userData.token}`,
@@ -131,7 +146,9 @@ const Dispensacaocomp = () => {
     }
 
     if (quantidade > selectedMed.quantity) {
-      toast.error(`Quantidade indisponível. Estoque atual: ${selectedMed.quantity}`);
+      toast.error(
+        `Quantidade indisponível. Estoque atual: ${selectedMed.quantity}`
+      );
       return;
     }
 
@@ -142,20 +159,22 @@ const Dispensacaocomp = () => {
     }
 
     try {
-      const dispensacaoResponse = await fetch("http://localhost:5000/dispensacao", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${userData.token}`,
-        },
-        body: JSON.stringify({
-          paciente_cpf: cpfPaciente,
-          medicamento_id: selectedMed.medicamentoId || selectedMed.id,
-          lote_id: selectedMed.lote_id,
-          quantidade_dispensada: quantidade,
-          data_hora: new Date().toISOString(),
-        }),
-      });
+      const dispensacaoResponse = await fetch(
+        "http://localhost:5000/dispensacao",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${userData.token}`,
+          },
+          body: JSON.stringify({
+            paciente_cpf: cpfPaciente,
+            medicamento_id: selectedMed.medicamentoId || selectedMed.id,
+            lote_id: selectedMed.lote_id,
+            quantidade_dispensada: quantidade,
+          }),
+        }
+      );
 
       if (!dispensacaoResponse.ok) {
         throw new Error("Falha ao registrar dispensação");
@@ -163,7 +182,7 @@ const Dispensacaocomp = () => {
 
       const novaQuantidade = selectedMed.quantity - quantidade;
       const updateResponse = await fetch(
-        `http://localhost:5000/lotes/${selectedMed.id}`,
+        `http://localhost:5000/medicamentos/${selectedMed.id}`,
         {
           method: "PUT",
           headers: {
@@ -240,11 +259,21 @@ const Dispensacaocomp = () => {
               <ImagemMedicamento src={med.imageUrl} alt={med.medicationName} />
 
               <div style={styles.medInfo}>
-                <p><strong>Lote de Farmácia:</strong> {med.number}</p>
-                <p><strong>Fabricante:</strong> {med.manufacturer}</p>
-                <p><strong>Validade:</strong> {med.expirationDate}</p>
-                <p><strong>Estoque:</strong> {med.quantity} unidade(s)</p>
-                <p><strong>Gramas:</strong> {med.grams || "N/A"}</p>
+                <p>
+                  <strong>Lote de Farmácia:</strong> {med.number}
+                </p>
+                <p>
+                  <strong>Fabricante:</strong> {med.manufacturer}
+                </p>
+                <p>
+                  <strong>Validade:</strong> {med.expirationDate}
+                </p>
+                <p>
+                  <strong>Estoque:</strong> {med.quantity} unidade(s)
+                </p>
+                <p>
+                  <strong>Gramas:</strong> {med.grams || "N/A"}
+                </p>
               </div>
 
               <div style={styles.medFooter}>
@@ -267,17 +296,28 @@ const Dispensacaocomp = () => {
           <div style={styles.modalTitleContainer}>
             <img src="/images/pill.png" alt="Pílula" style={styles.pillIcon} />
           </div>
-          <Modal.Title style={styles.modaltitle}>Dispensar Medicamento</Modal.Title>
+          <Modal.Title style={styles.modaltitle}>
+            Dispensar Medicamento
+          </Modal.Title>
         </Modal.Header>
         <Modal.Body style={styles.modalBody}>
           {selectedMed && (
             <>
-              <p><strong>Medicamento:</strong> {selectedMed.medicationName}</p>
-              <p><strong>Lote de Farmácia:</strong> {selectedMed.number}</p>
-              <p><strong>Estoque disponível:</strong> {selectedMed.quantity} unidades</p>
+              <p>
+                <strong>Medicamento:</strong> {selectedMed.medicationName}
+              </p>
+              <p>
+                <strong>Lote de Farmácia:</strong> {selectedMed.number}
+              </p>
+              <p>
+                <strong>Estoque disponível:</strong> {selectedMed.quantity}{" "}
+                unidades
+              </p>
 
               <Form.Group controlId="quantidade" style={styles.formGroup}>
-                <Form.Label style={styles.formLabel}>Quantidade a dispensar</Form.Label>
+                <Form.Label style={styles.formLabel}>
+                  Quantidade a dispensar
+                </Form.Label>
                 <Form.Control
                   type="number"
                   value={quantidade}
@@ -292,7 +332,9 @@ const Dispensacaocomp = () => {
               </Form.Group>
 
               <Form.Group controlId="cpfPaciente" style={styles.formGroup}>
-                <Form.Label style={styles.formLabel}>CPF do Paciente</Form.Label>
+                <Form.Label style={styles.formLabel}>
+                  CPF do Paciente
+                </Form.Label>
                 <Form.Control
                   type="text"
                   value={cpfPaciente}
@@ -316,12 +358,20 @@ const Dispensacaocomp = () => {
           )}
         </Modal.Body>
         <Modal.Footer style={styles.modalFooter}>
-          <Button variant="secondary" onClick={() => setShowModal(false)}>Cancelar</Button>
-          <Button variant="primary" onClick={confirmarDispensacao}>Confirmar</Button>
+          <Button variant="secondary" onClick={() => setShowModal(false)}>
+            Cancelar
+          </Button>
+          <Button variant="primary" onClick={confirmarDispensacao}>
+            Confirmar
+          </Button>
         </Modal.Footer>
       </Modal>
 
-      <ToastContainer position="top-right" autoClose={5000} hideProgressBar={false} />
+      <ToastContainer
+        position="top-right"
+        autoClose={5000}
+        hideProgressBar={false}
+      />
     </div>
   );
 };

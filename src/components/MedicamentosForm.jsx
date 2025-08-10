@@ -4,7 +4,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-const BatchForm = ({ batch, onClose, onSave }) => {
+const MedicamentosForm = ({ batch, onClose, onSave }) => {
   const [formData, setFormData] = useState({
     id: null,
     number: "",
@@ -36,75 +36,75 @@ const BatchForm = ({ batch, onClose, onSave }) => {
   const navigate = useNavigate();
   const { id } = useParams();
 
-  const getToken = () => {
-  const userDataString = localStorage.getItem("userData");
-  console.log("📦 Dados brutos do localStorage:", userDataString);
-
-  if (!userDataString) return null;
-
-  const userData = JSON.parse(userDataString);
-  const token = userData?.token || null;
-
-  console.log("🔑 Token do localStorage:", token);
-  return token;
-};
-
-
-
-useEffect(() => {
-  const fetchExistingBatches = async () => {
-    const userDataString = localStorage.getItem("userData");
-
-    console.log("📦 Dados brutos do localStorage:", userDataString);
-
-    if (!userDataString) {
-      console.error("❌ Nenhum dado de usuário encontrado.");
-      navigate("/login");
-      return;
-    }
-
-    const userData = JSON.parse(userDataString);
-    const token = userData?.token;  // 👈 Correto: pega o token do objeto
-
-    console.log("🔑 Token do localStorage:", token);
-
-    if (!token) {
-      console.error("❌ Token não encontrado dentro do userData.");
-      navigate("/login");
-      return;
-    }
-
-    try {
-      const response = await fetch("http://localhost:5000/lotes", {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-
-        if (response.status === 401 && errorText.includes("expired")) {
-          localStorage.removeItem("userData");
-          alert("Sua sessão expirou. Faça login novamente.");
-          navigate("/login");
-          return;
-        }
-
-        throw new Error(`Erro ao buscar lotes: ${errorText}`);
-      }
-
-      const data = await response.json();
-      setExistingBatches(data);
-    } catch (error) {
-      console.error("❌ Erro ao buscar lotes existentes:", error);
-    }
+  // Validation functions
+  const validateMedicationName = (name) => {
+    const regex = /^[a-zA-ZÀ-ÿ\s]+$/;
+    return name.trim() && regex.test(name);
   };
 
-  fetchExistingBatches();
-}, [navigate]);
+  const validatePharmacyLot = (lot) => {
+    if (!lot.trim()) return false;
+    const onlyNumbers = /^\d+$/.test(lot);
+    const onlyLetters = /^[a-zA-Z]+$/.test(lot);
+    const hasBoth = /[a-zA-Z]/.test(lot) && /\d/.test(lot);
+    return !onlyNumbers && !onlyLetters && hasBoth;
+  };
+
+  const validatePurchaseLot = (lot) => {
+    return validatePharmacyLot(lot);
+  };
+
+  const validateManufacturer = (manufacturer) => {
+    if (!manufacturer.trim()) return false;
+    const hasNumbers = /\d/.test(manufacturer);
+    const hasSequentialLetters = /([a-zA-Z])\1\1/.test(manufacturer);
+    return !hasNumbers && !hasSequentialLetters;
+  };
+
+  const getToken = () => {
+    const userDataString = localStorage.getItem("userData");
+    if (!userDataString) return null;
+    const userData = JSON.parse(userDataString);
+    return userData?.token || null;
+  };
+
+  useEffect(() => {
+    const fetchExistingBatches = async () => {
+      const token = getToken();
+      if (!token) {
+        navigate("/login");
+        return;
+      }
+
+      try {
+        const response = await fetch("http://localhost:5000/medicamentos", {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          if (response.status === 401 && errorText.includes("expired")) {
+            localStorage.removeItem("userData");
+            alert("Sua sessão expirou. Faça login novamente.");
+            navigate("/login");
+            return;
+          }
+          throw new Error(`Erro ao buscar lotes: ${errorText}`);
+        }
+
+        const data = await response.json();
+        setExistingBatches(data);
+      } catch (error) {
+        console.error("Erro ao buscar lotes existentes:", error);
+      }
+    };
+
+    fetchExistingBatches();
+  }, [navigate]);
 
   useEffect(() => {
     if (batch) {
@@ -123,8 +123,6 @@ useEffect(() => {
         ...batch,
         expirationDate: formatDate(batch.expirationDate),
         manufacturingDate: formatDate(batch.manufacturingDate),
-        uniqueFarmacyLotId: generateUniqueId(batch.number),
-        uniquePurchaseLotId: generateUniqueId(batch.lotNumber),
       });
     } else {
       const today = new Date().toISOString().split("T")[0];
@@ -139,123 +137,117 @@ useEffect(() => {
         medicationImage: "",
         manufacturingDate: today,
         grams: 0,
-        uniqueFarmacyLotId: "",
-        uniquePurchaseLotId: "",
       });
     }
   }, [batch]);
 
-  const generateUniqueId = (value) => {
-    return value ? `${value}_${new Date().getTime()}` : "";
-  };
+  const checkDuplicates = (number, lotNumber, medicationName) => {
+  const batchesToCheck = existingBatches.filter(
+    (existingBatch) => !batch || existingBatch.id !== batch.id
+  );
 
-  const checkDuplicates = (number, lotNumber) => {
-    let isDuplicateNumber = false;
-    let isDuplicateLotNumber = false;
+  let isDuplicateNumber = false;
+  let isDuplicateLotNumber = false;
 
-    const batchesToCheck = existingBatches.filter(
-      (existingBatch) => !batch || existingBatch.id !== batch.id
+  if (number && medicationName) {
+    isDuplicateNumber = batchesToCheck.some(
+      (batch) =>
+        batch.number.toLowerCase() === number.toLowerCase() &&
+        batch.medicationName.toLowerCase() === medicationName.toLowerCase()
     );
+  }
 
-    if (number) {
-      isDuplicateNumber = batchesToCheck.some(
-        (batch) => batch.number === number
-      );
-    }
+  if (lotNumber && medicationName) {
+    isDuplicateLotNumber = batchesToCheck.some(
+      (batch) =>
+        batch.lotNumber.toLowerCase() === lotNumber.toLowerCase() &&
+        batch.medicationName.toLowerCase() === medicationName.toLowerCase()
+    );
+  }
 
-    if (lotNumber) {
-      isDuplicateLotNumber = batchesToCheck.some(
-        (batch) => batch.lotNumber === lotNumber
-      );
-    }
+  return { isDuplicateNumber, isDuplicateLotNumber };
+};
 
-    return { isDuplicateNumber, isDuplicateLotNumber };
+  const saveBatch = async (batchData) => {
+    setIsLoading(true);
+    setErrorMessage("");
+
+    try {
+      const isEdit = !!batchData.id;
+      const endpoint = isEdit
+        ? `http://localhost:5000/medicamentos/${batchData.id}`
+        : "http://localhost:5000/medicamentos";
+
+      const payload = {
+    number: batchData.number,
+    lotNumber: batchData.lotNumber,
+    expirationDate: batchData.expirationDate,
+    manufacturer: batchData.manufacturer,
+    quantity: Number(batchData.quantity) || 0,
+    medicationName: batchData.medicationName.charAt(0).toUpperCase() + 
+                    batchData.medicationName.slice(1).toLowerCase(),
+    medicationImage: batchData.medicationImage || null,
+    manufacturingDate: batchData.manufacturingDate,
+    grams: batchData.grams,
   };
 
- const saveBatch = async (batchData) => {
-  setIsLoading(true);
-  setErrorMessage("");
+      const token = getToken();
 
-  try {
-    const isEdit = !!batchData.id;
-    const endpoint = isEdit
-      ? `http://localhost:5000/lotes/${batchData.id}`
-      : "http://localhost:5000/lotes";
-
-    const payload = {
-      number: batchData.number,
-      lotNumber: batchData.lotNumber,
-      expirationDate: batchData.expirationDate,
-      manufacturer: batchData.manufacturer,
-      quantity: Number(batchData.quantity) || 0,
-      medicationName: batchData.medicationName,
-      medicationImage: batchData.medicationImage || null,
-      manufacturingDate: batchData.manufacturingDate,
-      grams: batchData.grams,
-      uniqueFarmacyLotId: batchData.uniqueFarmacyLotId,
-      uniquePurchaseLotId: batchData.uniquePurchaseLotId,
-    };
-
-    const token = getToken();
-
-    if (!token) {
-      alert("Token não encontrado. Faça login novamente.");
-      navigate("/login");
-      return;
-    }
-
-    const response = await fetch(endpoint, {
-      method: isEdit ? "PUT" : "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(payload),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-
-      if (response.status === 401 && errorText.includes("expired")) {
-        localStorage.removeItem("userData");
-        localStorage.removeItem("token");
-        alert("Sua sessão expirou. Faça login novamente.");
+      if (!token) {
+        alert("Token não encontrado. Faça login novamente.");
         navigate("/login");
         return;
       }
 
-      let errorData;
-      try {
-        errorData = JSON.parse(errorText);
-      } catch {
-        errorData = { message: `Erro HTTP! status: ${response.status}` };
-      }
-      toast.error(errorData.message || "Erro ao salvar o lote");
-      throw new Error(errorData.message || "Erro ao salvar o lote");
-    }
+      const response = await fetch(endpoint, {
+        method: isEdit ? "PUT" : "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
 
-    const result = await response.json();
-    toast.success(
-      isEdit ? "Lote atualizado com sucesso!" : "Lote adicionado com sucesso!"
-    );
-    return result;
-  } catch (error) {
-    setErrorMessage(error.message || "Erro ao salvar o lote");
-    throw error;
-  } finally {
-    setIsLoading(false);
-  }
-};
+      if (!response.ok) {
+        const errorText = await response.text();
+        if (response.status === 401 && errorText.includes("expired")) {
+          localStorage.removeItem("userData");
+          alert("Sua sessão expirou. Faça login novamente.");
+          navigate("/login");
+          return;
+        }
+
+        let errorData;
+        try {
+          errorData = JSON.parse(errorText);
+        } catch {
+          errorData = { message: `Erro HTTP! status: ${response.status}` };
+        }
+        toast.error(errorData.message || "Erro ao salvar o lote");
+        throw new Error(errorData.message || "Erro ao salvar o lote");
+      }
+
+      const result = await response.json();
+      toast.success(
+        isEdit ? "Lote atualizado com sucesso!" : "Lote adicionado com sucesso!"
+      );
+      return result;
+    } catch (error) {
+      setErrorMessage(error.message || "Erro ao salvar o lote");
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleInputChange = (name, value) => {
-    // Se estiver alterando number ou lotNumber, verifica duplicidade
     if (name === "number" || name === "lotNumber") {
       const { isDuplicateNumber, isDuplicateLotNumber } = checkDuplicates(
         name === "number" ? value : formData.number,
-        name === "lotNumber" ? value : formData.lotNumber
+        name === "lotNumber" ? value : formData.lotNumber,
+        formData.medicationName
       );
-
       setFormErrors((prev) => ({
         ...prev,
         duplicateNumber: isDuplicateNumber,
@@ -263,23 +255,7 @@ useEffect(() => {
       }));
     }
 
-    if (name === "number") {
-      const uniqueFarmacyLotId = generateUniqueId(value);
-      setFormData((prev) => ({
-        ...prev,
-        [name]: value,
-        uniqueFarmacyLotId,
-      }));
-    } else if (name === "lotNumber") {
-      const uniquePurchaseLotId = generateUniqueId(value);
-      setFormData((prev) => ({
-        ...prev,
-        [name]: value,
-        uniquePurchaseLotId,
-      }));
-    } else {
-      setFormData((prev) => ({ ...prev, [name]: value }));
-    }
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleImageChange = (e) => {
@@ -294,26 +270,23 @@ useEffect(() => {
   };
 
   const handleSubmit = async () => {
-    const manufacturingDate = new Date(
-      formData.manufacturingDate + "T00:00:00"
-    );
+    const manufacturingDate = new Date(formData.manufacturingDate + "T00:00:00");
     const expirationDate = new Date(formData.expirationDate + "T00:00:00");
 
-    const manufacturingDateString = manufacturingDate
-      .toISOString()
-      .split("T")[0];
+    const manufacturingDateString = manufacturingDate.toISOString().split("T")[0];
     const expirationDateString = expirationDate.toISOString().split("T")[0];
 
     const { isDuplicateNumber, isDuplicateLotNumber } = checkDuplicates(
       formData.number,
-      formData.lotNumber
+      formData.lotNumber,
+      formData.medicationName
     );
 
     const errors = {
-      medicationName: !formData.medicationName.trim(),
-      number: !formData.number.trim() || formData.number.length > 12,
-      lotNumber: !formData.lotNumber.trim() || formData.lotNumber.length > 12,
-      manufacturer: !formData.manufacturer.trim(),
+      medicationName: !validateMedicationName(formData.medicationName),
+      number: !validatePharmacyLot(formData.number),
+      lotNumber: !validatePurchaseLot(formData.lotNumber),
+      manufacturer: !validateManufacturer(formData.manufacturer),
       quantity: formData.quantity <= 0,
       expirationDate: manufacturingDateString >= expirationDateString,
       grams: formData.grams <= 0,
@@ -325,9 +298,23 @@ useEffect(() => {
 
     if (Object.values(errors).some((error) => error)) {
       if (errors.duplicateNumber) {
-        setErrorMessage("O código do lote de farmácia já existe.");
+        setErrorMessage("O código do lote de farmácia já existe para este medicamento.");
       } else if (errors.duplicateLotNumber) {
-        setErrorMessage("O lote de compra já existe.");
+        setErrorMessage("O lote de compra já existe para este medicamento.");
+      } else if (errors.medicationName) {
+        setErrorMessage("Nome do medicamento deve conter apenas letras e não pode estar vazio.");
+      } else if (errors.number) {
+        setErrorMessage("Código de lote de farmácia deve conter letras e números mesclados e não pode estar vazio.");
+      } else if (errors.lotNumber) {
+        setErrorMessage("Lote de compra deve conter letras e números mesclados e não pode estar vazio.");
+      } else if (errors.manufacturer) {
+        setErrorMessage("Fabricante não pode conter números ou letras sequenciais e não pode estar vazio.");
+      } else if (errors.quantity) {
+        setErrorMessage("Quantidade deve ser maior que zero.");
+      } else if (errors.grams) {
+        setErrorMessage("Gramas do medicamento deve ser maior que zero.");
+      } else if (errors.expirationDate) {
+        setErrorMessage("Data de validade deve ser posterior à data de fabricação.");
       } else {
         setErrorMessage("Por favor, preencha todos os campos corretamente!");
       }
@@ -388,7 +375,7 @@ useEffect(() => {
               type="invalid"
               style={{ marginTop: "-16px", fontSize: "14px", color: "#dc3545" }}
             >
-              Por favor, informe o nome do medicamento
+              Por favor, informe o nome do medicamento (apenas letras)
             </Form.Control.Feedback>
           </Form.Group>
 
@@ -398,7 +385,7 @@ useEffect(() => {
             </Form.Label>
             <Form.Control
               type="text"
-              placeholder="Digite o código do lote de farmacia"
+              placeholder="Digite o código do lote de farmácia"
               value={formData.number}
               onChange={(e) => {
                 if (e.target.value.length <= 12) {
@@ -413,7 +400,7 @@ useEffect(() => {
             >
               {formErrors.duplicateNumber
                 ? "Este código de lote de farmácia já existe"
-                : "Por favor, informe o código do lote"}
+                : "Informe um código válido (letras e números mesclados)"}
             </Form.Control.Feedback>
           </Form.Group>
 
@@ -438,11 +425,10 @@ useEffect(() => {
             >
               {formErrors.duplicateLotNumber
                 ? "Este lote de compra já existe"
-                : "Por favor, informe o lote de compra"}
+                : "Informe um lote válido (letras e números mesclados)"}
             </Form.Control.Feedback>
           </Form.Group>
 
-          {/* Restante do formulário permanece igual */}
           <Form.Group className="mb-3" controlId="manufacturer">
             <Form.Label style={{ color: "#000000" }}>Fabricante</Form.Label>
             <Form.Control
@@ -458,7 +444,7 @@ useEffect(() => {
               type="invalid"
               style={{ marginTop: "-16px", fontSize: "14px", color: "#dc3545" }}
             >
-              Por favor, informe o fabricante
+              Fabricante não pode conter números ou letras sequenciais
             </Form.Control.Feedback>
           </Form.Group>
 
@@ -555,7 +541,7 @@ useEffect(() => {
         </Button>
         <Button variant="primary" onClick={handleSubmit} disabled={isLoading}>
           {isLoading ? "Salvando..." : formData.id ? "Atualizar" : "Salvar"}{" "}
-          Lote
+       
         </Button>
       </Modal.Footer>
 
@@ -568,8 +554,7 @@ useEffect(() => {
   );
 };
 
-export default BatchForm;
-
+export default MedicamentosForm;
 const styles = {
   container: {
     padding: "20px",

@@ -8,13 +8,14 @@ import CadastroPaciente from "./views/CadastroPaciente.jsx";
 import Login from "./views/Login.jsx";
 import NoPage from "./views/NoPage.jsx";
 import CadastroDlotes from "./views/CadastroDlotes.jsx";
-import MedHistorico from "./views/MedHistorico.jsx";
+// import MedHistorico from "./views/MedHistorico.jsx";
+import HistoricoDisp from './views/HistoricoDisp.jsx'
 import Homelogar from "./components/Homelogar.jsx";
 import LotesEntregues from "./views/LotesEntregues.jsx"; //  o componente Dashboard esta em desenvolvimento
 import Profile from "./views/Profile.jsx";
 import CompletarCadastroPage from "./views/CompletarCadastro.jsx";
-import CadastrarUser from "./views/CadastrarUsuarios.jsx";
-import ProtectedRoute from "./components/ProtectedRoute.jsx";
+// import CadastrarUser from "./views/CadastrarUsuarios.jsx";
+// import ProtectedRoute from "./components/ProtectedRoute.jsx";
 
 function App() {
   const router = createBrowserRouter([
@@ -52,8 +53,8 @@ function App() {
           element: <CadastroDlotes />,
         },
         {
-          path: "historicomedicamentos",
-          element: <MedHistorico />,
+          path: "historicodisp",
+          element: <HistoricoDisp />,
         },
         {
           path: "lotes", 
@@ -67,14 +68,14 @@ function App() {
           path: "completarcadastro",
           element: <CompletarCadastroPage />,
         },
-        {
-          path: "cadastrarusuario",
-          element: (
-            <ProtectedRoute requiredRole="administrador">
-              <CadastrarUser />
-            </ProtectedRoute>
-          ),
-        },
+        // {
+        //   path: "cadastrarusuario",
+        //   element: (
+        //     <ProtectedRoute requiredRole="administrador">
+        //       <CadastrarUser />
+        //     </ProtectedRoute>
+        //   ),
+        // },
       ],
     },
   ]);

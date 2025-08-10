@@ -30,101 +30,140 @@ const CriarContaForm = () => {
   const toggleConfirmPasswordVisibility = () => setShowConfirmPassword(!showConfirmPassword);
 
   const checkEmailExists = async (email) => {
-    try {
-      const response = await fetch(`http://localhost:5000/usuarios?email=${email}`);
-      const data = await response.json();
-      return data.length > 0;
-    } catch (error) {
-      console.error('Erro ao verificar email:', error);
+  try {
+    const response = await fetch(`http://localhost:5000/usuarios/registro?email=${email}`);
+    if (!response.ok) {
+      return false; 
+    }
+    const data = await response.json();
+    return !!data.id; 
+  } catch (error) {
+    console.error('Erro ao verificar email:', error);
+    return false;
+  }
+};
+
+const checkPhoneExists = async (phone) => {
+  try {
+    const response = await fetch(`http://localhost:5000/usuarios/registro?phone=${phone}`);
+    if (!response.ok) {
       return false;
     }
-  };
+    const data = await response.json();
+    return !!data.id; 
+  } catch (error) {
+    console.error('Erro ao verificar telefone:', error);
+    return false;
+  }
+};
 
-  const createUser = async (userData) => {
-    const response = await fetch('http://localhost:5000/usuarios', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(userData),
-    });
-    if (!response.ok) throw new Error('Erro ao criar usuário');
-    return await response.json();
-  };
+
+const createUser = async (dados) => {
+  const response = await fetch("http://localhost:5000/usuarios/registro", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(dados),
+  });
+
+  if (!response.ok) {
+    const erro = await response.json();
+    throw new Error(erro.mensagem || "Erro ao criar usuário");
+  }
+
+  return await response.json();
+};
+
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+  e.preventDefault();
 
-    if (!name || !email || !birthDate || !phone || !password || password !== confirmPassword) {
-      showToast('Preencha todos os campos corretamente.', 'error');
-      return;
-    }
+  if (!name || !email || !birthDate || !phone || !password || password !== confirmPassword) {
+    showToast('Preencha todos os campos corretamente.', 'error');
+    return;
+  }
 
-    if (password.length < 6) {
-      showToast('A senha deve ter pelo menos 6 caracteres.', 'error');
-      return;
-    }
+  if (password.length < 6) {
+    showToast('A senha deve ter pelo menos 6 caracteres.', 'error');
+    return;
+  }
 
-    setIsLoading(true);
+  setIsLoading(true);
 
-    try {
-      const emailExists = await checkEmailExists(email);
-      if (emailExists) {
-        showToast('Este email já está cadastrado.', 'error');
-        setIsLoading(false);
-        return;
-      }
-
-      const finalRole = registrationId.trim() === '' ? 'administrador' : 'farmaceutico';
-
-      const newUser = {
-        name,
-        email,
-        birthDate,
-        role: finalRole,
-        phone,
-        crf: registrationId.trim(),
-        password,
-        createdAt: new Date().toISOString(),
-      };
-
-      await createUser(newUser);
-
-      // Login automático
-      const loginResponse = await fetch('http://localhost:5000/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
-
-      const loginData = await loginResponse.json();
-      if (!loginResponse.ok) throw new Error(loginData.mensagem || 'Erro no login automático');
-
-      const token = loginData.token;
-      const user = loginData.user;
-
-      // Verifica cadastro
-      const verifyRes = await fetch(`http://localhost:5000/verificar-cadastro?email=${email}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const verifyData = await verifyRes.json();
-
-      localStorage.setItem('userData', JSON.stringify({ token, user }));
-
-      showToast('Conta criada com sucesso!', 'success');
-
-      setTimeout(() => {
-        if (verifyData.cadastroCompleto) {
-          navigate('/cadastrarlotes');
-        } else {
-          navigate('/completarcadastro');
-        }
-      }, 1500);
-    } catch (error) {
-      console.error(error);
-      showToast('Erro ao criar conta.', 'error');
-    } finally {
+  try {
+    // Validações preliminares, pode manter ou remover, já que o backend também valida.
+    const emailExists = await checkEmailExists(email);
+    if (emailExists) {
+      showToast('Este email já está cadastrado.', 'error');
       setIsLoading(false);
+      return;
     }
-  };
+
+    const phoneExists = await checkPhoneExists(phone);
+    if (phoneExists) {
+      showToast('Este telefone já está cadastrado.', 'error');
+      setIsLoading(false);
+      return;
+    }
+
+    const now = new Date();
+    const createdAt = new Date(now.getTime() - now.getTimezoneOffset() * 60000)
+      .toISOString()
+      .slice(0, 19);
+
+    const finalRole = registrationId.trim() === '' ? 'administrador' : 'farmacêutico';
+
+    const newUser = {
+      name,
+      email,
+      birthDate,
+      role: finalRole,
+      phone,
+      crf: registrationId.trim(),
+      password,
+      createdAt,
+    };
+
+    // Tenta criar o usuário
+    await createUser(newUser);
+
+    // Após criar, tenta logar automaticamente
+    const loginResponse = await fetch('http://localhost:5000/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+
+    const loginData = await loginResponse.json();
+    if (!loginResponse.ok) throw new Error(loginData.mensagem || 'Erro no login automático');
+
+    const token = loginData.token;
+    const user = loginData.user;
+
+    const verifyRes = await fetch(`http://localhost:5000/usuarios/verificar-cadastro?email=${email}`);
+    const verifyData = await verifyRes.json();
+
+    localStorage.setItem('userData', JSON.stringify({ token, user }));
+
+    showToast('Conta criada com sucesso!', 'success');
+
+    setTimeout(() => {
+      if (verifyData.cadastroCompleto) {
+        navigate('/cadastrarlotes');
+      } else {
+        navigate('/completarcadastro');
+      }
+    }, 1500);
+  } catch (error) {
+    console.error(error);
+    // Exibe mensagem retornada pelo backend (erro.message) ou uma genérica
+    showToast(error.message || 'Erro ao criar conta.', 'error');
+  } finally {
+    setIsLoading(false);
+  }
+};
+
 
   const handleGoogleSignup = async () => {
     setIsLoading(true);
@@ -262,7 +301,7 @@ const styles = {
   display: 'flex',
   justifyContent: 'center',
   backgroundColor: 'transparent', // garante que o fundo não interfira
-  zIndex: 1, // garante que fique acima de outros elementos se necessário
+  zIndex: 1, 
 },
   googleInnerWrapper: {
     transform: 'scale(0.9)',

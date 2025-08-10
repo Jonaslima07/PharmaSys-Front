@@ -1,12 +1,12 @@
-import React from 'react';
-import CadastrarUsuarios from '../components/CadastrarUsuarios';;
+// import React from 'react';
+// import CadastrarUsuarios from '../components/CadastrarUsuarios';;
 
-const CadastrarUser = () => {
-  return (
-  <>
-    <CadastrarUsuarios/>
-  </>
-  );
-};
+// const CadastrarUser = () => {
+//   return (
+//   <>
+//     <CadastrarUsuarios/>
+//   </>
+//   );
+// };
 
-export default CadastrarUser;
+// export default CadastrarUser;

@@ -1,25 +1,47 @@
 import React, { useState, useEffect } from 'react';
-import { FaFileAlt } from 'react-icons/fa'; // Ícone de arquivo (documento)
+import { FaFileAlt } from 'react-icons/fa';
 
-const MedicationHistory = () => {
+const HistoricoDisp = () => {
   const [medications, setMedications] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterPatient, setFilterPatient] = useState('');
-  const [sortBy, setSortBy] = useState('date-desc');  // Ordem padrão por data (mais recente)
+  const [sortBy, setSortBy] = useState('date-desc');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [currentPage, setCurrentPage] = useState(1);  // Página atual
-  const [itemsPerPage, setItemsPerPage] = useState(10);  // Número de itens por página
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true);
       try {
-        
-        const response = await fetch('http://localhost:5000/historicos');
+        const tokenString = localStorage.getItem('userData');
+        if (!tokenString) {
+          setError('Usuário não autenticado');
+          setIsLoading(false);
+          return;
+        }
+
+        const userdata = JSON.parse(tokenString);
+        const token = userdata.token;
+
+        if (!token) {
+          setError('Token não encontrado');
+          setIsLoading(false);
+          return;
+        }
+
+        const response = await fetch('http://localhost:5000/historico', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
         if (response.ok) {
           const data = await response.json();
-          setMedications(data);  
+          setMedications(data);
+        } else if (response.status === 401) {
+          setError('Não autorizado. Faça login novamente.');
         } else {
           setError('Falha ao carregar os dados.');
         }
@@ -32,54 +54,56 @@ const MedicationHistory = () => {
     };
 
     fetchData();
-  }, []);  // Executa apenas uma vez quando o componente for montado
+  }, []);
 
-  
+  const extrairNumeroRegistro = (observacao) => {
+    if (!observacao) return 'N/A';
+    const match = observacao.match(/registro:\s*(\d+)/i);
+    return match ? match[1] : 'N/A';
+  };
+
   const filteredMedications = medications.filter(med => {
-    const matchesSearch = 
+    const matchesSearch =
       med.medicamento?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       med.paciente?.toLowerCase().includes(searchTerm.toLowerCase());
-      
+
     const matchesPatient = filterPatient ? med.paciente === filterPatient : true;
-    
+
     return matchesSearch && matchesPatient;
   });
 
   const sortedMedications = [...filteredMedications].sort((a, b) => {
     const dateA = new Date(a.data);
     const dateB = new Date(b.data);
-    
+
     switch (sortBy) {
       case 'date-desc':
-        return dateB.getTime() - dateA.getTime();  // Data mais recente
+        return dateB.getTime() - dateA.getTime();
       case 'date-asc':
-        return dateA.getTime() - dateB.getTime();  // Data mais antiga
+        return dateA.getTime() - dateB.getTime();
       case 'patient-asc':
-        return a.paciente.localeCompare(b.paciente);  // Nome do Paciente A-Z
+        return a.paciente.localeCompare(b.paciente);
       case 'patient-desc':
-        return b.paciente.localeCompare(a.paciente);  // Nome do Paciente Z-A
+        return b.paciente.localeCompare(a.paciente);
       case 'medication-asc':
-        return a.medicamento.localeCompare(b.medicamento);  // Medicamento A-Z
+        return a.medicamento.localeCompare(b.medicamento);
       case 'medication-desc':
-        return b.medicamento.localeCompare(a.medicamento);  // Medicamento Z-A
+        return b.medicamento.localeCompare(a.medicamento);
       default:
         return 0;
     }
   });
 
-  // Calcular os medicamentos a serem exibidos na página atual
   const indexOfLastMedication = currentPage * itemsPerPage;
   const indexOfFirstMedication = indexOfLastMedication - itemsPerPage;
   const currentMedications = sortedMedications.slice(indexOfFirstMedication, indexOfLastMedication);
-
-  // Total de páginas
   const totalPages = Math.ceil(filteredMedications.length / itemsPerPage);
 
   const handleReset = () => {
     setSearchTerm('');
     setFilterPatient('');
     setSortBy('date-desc');
-    setCurrentPage(1); // Resetar para a primeira página
+    setCurrentPage(1);
   };
 
   const formatDate = (dateString) => {
@@ -89,22 +113,16 @@ const MedicationHistory = () => {
 
   const formatTime = (dateString) => {
     const date = new Date(dateString);
-    return date.toLocaleTimeString('pt-BR'); // Exibe a hora no formato de 24h
+    return date.toLocaleTimeString('pt-BR');
   };
 
-  if (isLoading) {
-    return <div>Carregando...</div>;
-  }
-
-  if (error) {
-    return <div>Erro: {error}</div>;
-  }
+  if (isLoading) return <div>Carregando...</div>;
+  if (error) return <div>Erro: {error}</div>;
 
   return (
     <div style={styles.container}>
-      <h1 style={styles.title}>Histórico de Medicamentos</h1>
-      
-      {/* Filtros */}
+      <h1 style={styles.title}>Histórico de Dispensação</h1>
+
       <div style={styles.filtersContainer}>
         <div style={styles.filterGroup}>
           <label style={styles.filterLabel}>Pesquisar</label>
@@ -116,7 +134,7 @@ const MedicationHistory = () => {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        
+
         <div style={styles.filterGroup}>
           <label style={styles.filterLabel}>Filtrar por Paciente</label>
           <select
@@ -130,7 +148,7 @@ const MedicationHistory = () => {
             ))}
           </select>
         </div>
-        
+
         <div style={styles.filterGroup}>
           <label style={styles.filterLabel}>Ordenar por</label>
           <select
@@ -147,20 +165,17 @@ const MedicationHistory = () => {
           </select>
         </div>
       </div>
-      
+
       <div style={styles.resultsInfo}>
         {filteredMedications.length} resultados encontrados
-        <button onClick={handleReset} style={styles.resetButton}>
-          Limpar Filtros
-        </button>
+        <button onClick={handleReset} style={styles.resetButton}>Limpar Filtros</button>
       </div>
-      
-      {/* Lista de medicamentos */}
+
       <div style={styles.medicationsList}>
         {currentMedications.map(med => (
           <div key={med.id} style={styles.medicationCard}>
             <div style={styles.iconContainer}>
-               <FaFileAlt style={styles.medicationIcon} /> {/* Ícone de documento */}
+              <FaFileAlt style={styles.medicationIcon} />
             </div>
             <h3 style={styles.medicationName}>{med.medicamento}</h3>
             <p style={styles.medicationInfo}>Paciente: {med.paciente}</p>
@@ -168,14 +183,14 @@ const MedicationHistory = () => {
             <p style={styles.medicationInfo}><strong>Gramas:</strong> {med.gramas || 'N/A'}</p>
             <div style={styles.medicationFooter}>
               <span>Dispensado em: {formatDate(med.data)} {formatTime(med.data)}</span>
-              <span>Código: {med.codigo}</span> {/* Exibe o código único */}
+              <span>Número de Registro: {med.numero_registro}</span>
+
               <span>Por: {med.dispensadoPor}</span>
             </div>
           </div>
         ))}
       </div>
-      
-      {/* Paginação */}
+
       <div style={styles.pagination}>
         <button
           style={styles.pageButton}
@@ -205,7 +220,6 @@ const MedicationHistory = () => {
   );
 };
 
-// Estilos movidos para uma constante conforme solicitado
 const styles = {
   container: {
     maxWidth: '1200px',
@@ -218,17 +232,15 @@ const styles = {
     width: '40px',
     height: '40px',
     borderRadius: '50%',
-    backgroundColor:  '#78C2FF',
+    backgroundColor: '#78C2FF',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
   },
-
   medicationIcon: {
     fontSize: '20px',
     color: '#001f3d',
   },
-
   title: {
     fontSize: '24px',
     marginBottom: '20px',
@@ -324,4 +336,4 @@ const styles = {
   }
 };
 
-export default MedicationHistory;
+export default HistoricoDisp;

@@ -1,14 +1,14 @@
-import React from 'react';
-import MedicationHistory from '../components/MedicationHistory';
+// import React from 'react';
+// import MedicationHistory from '../components/MedicationHistory';
 
-const Dashboard = () => {
-  return (
-  <>
+// const Dashboard = () => {
+//   return (
+//   <>
 
-     <MedicationHistory/>
-  </>
+//      <MedicationHistory/>
+//   </>
  
-  );
-};
+//   );
+// };
 
-export default Dashboard;
+// export default Dashboard;
