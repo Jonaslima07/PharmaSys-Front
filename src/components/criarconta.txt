@@ -358,4 +358,3 @@ const createAccountStyle = {
 };
 
 export default LoginForm;
-*/

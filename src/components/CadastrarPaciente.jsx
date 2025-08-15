@@ -269,35 +269,67 @@ const CadastrarPaciente = () => {
   };
 
   const handleAddPaciente = async () => {
-    const errors = {
-      nome: isEmpty(formData.nome) || formData.nome.trim().length < 3 || !/^[A-Za-zÀ-ÖØ-öø-ÿ\s]+$/.test(formData.nome.trim()),
-      cartao_sus: isEmpty(formData.cartao_sus) || !/^\d{15}$/.test(formData.cartao_sus),
-      rg: isEmpty(formData.rg) || !/^\d{7,10}$/.test(formData.rg),
-      cpf: isEmpty(formData.cpf) || !/^\d{11}$/.test(formData.cpf),
-      telefone: isEmpty(formData.telefone) || !/^\d{10,11}$/.test(formData.telefone),
-      rua: isEmpty(formData.rua) || formData.rua.trim().length < 3,
-      numero: isEmpty(formData.numero),
-      bairro: isEmpty(formData.bairro) || formData.bairro.trim().length < 3,
-    };
-
-    setFormErrors(errors);
-
-    if (Object.values(errors).includes(true)) {
-      toast.error("Por favor, preencha todos os campos corretamente!");
-      return;
-    }
-
-    try {
-      if (formData.id) {
-        await editPaciente(formData);
-      } else {
-        await savePaciente(formData);
-      }
-    } catch (error) {
-      console.error(error.message);
-      toast.error(error.message);
-    }
+  const errors = {
+    nome: isEmpty(formData.nome) || formData.nome.trim().length < 3 || !/^[A-Za-zÀ-ÖØ-öø-ÿ\s]+$/.test(formData.nome.trim()),
+    cartao_sus: isEmpty(formData.cartao_sus) || !/^\d{15}$/.test(formData.cartao_sus),
+    rg: isEmpty(formData.rg) || !/^\d{7,10}$/.test(formData.rg),
+    cpf: isEmpty(formData.cpf) || !/^\d{11}$/.test(formData.cpf),
+    telefone: isEmpty(formData.telefone) || !/^\d{10,11}$/.test(formData.telefone),
+    rua: isEmpty(formData.rua) || formData.rua.trim().length < 3,
+    numero: isEmpty(formData.numero),
+    bairro: isEmpty(formData.bairro) || formData.bairro.trim().length < 3,
   };
+
+  setFormErrors(errors);
+
+  if (Object.values(errors).includes(true)) {
+    toast.error("Por favor, preencha todos os campos corretamente!");
+    return;
+  }
+
+
+
+  // 🔹 Validação para evitar duplicados específicos
+const cpfDuplicado = pacientes.find(p => p.cpf === formData.cpf && p.id !== formData.id);
+if (cpfDuplicado) {
+  toast.error("Já existe um paciente cadastrado com este CPF.");
+  return;
+}
+
+const rgDuplicado = pacientes.find(p => p.rg === formData.rg && p.id !== formData.id);
+if (rgDuplicado) {
+  toast.error("Já existe um paciente cadastrado com este RG.");
+  return;
+}
+
+const susDuplicado = pacientes.find(p => p.cartao_sus === formData.cartao_sus && p.id !== formData.id);
+if (susDuplicado) {
+  toast.error("Já existe um paciente cadastrado com este Cartão SUS.");
+  return;
+}
+ const cellDuplicado = pacientes.find(p => p.telefone === formData.telefone && p.id !== formData.id);
+if (cellDuplicado) {
+  toast.error("Já existe um paciente cadastrado com este telefone.");
+  return;
+}
+ const nomeDuplicado = pacientes.find(p => p.nome === formData.nome && p.id !== formData.id);
+if (nomeDuplicado) {
+  toast.error("Já existe um paciente cadastrado com este nome.");
+  return;
+}
+
+  try {
+    if (formData.id) {
+      await editPaciente(formData);
+    } else {
+      await savePaciente(formData);
+    }
+  } catch (error) {
+    console.error(error.message);
+    toast.error(error.message);
+  }
+};
+
 
   const resetForm = () => {
     setFormData({

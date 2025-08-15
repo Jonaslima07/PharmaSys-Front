@@ -11,7 +11,7 @@ const MedicamentosForm = ({ batch, onClose, onSave }) => {
     lotNumber: "",
     expirationDate: "",
     manufacturer: "",
-    quantity: 0,
+    quantity: 1,
     medicationName: "",
     medicationImage: "",
     manufacturingDate: "",
@@ -19,15 +19,8 @@ const MedicamentosForm = ({ batch, onClose, onSave }) => {
   });
 
   const [formErrors, setFormErrors] = useState({
-    medicationName: false,
     number: false,
-    lotNumber: false,
-    manufacturer: false,
-    quantity: false,
-    expirationDate: false,
-    grams: false,
     duplicateNumber: false,
-    duplicateLotNumber: false,
   });
 
   const [isLoading, setIsLoading] = useState(false);
@@ -36,29 +29,56 @@ const MedicamentosForm = ({ batch, onClose, onSave }) => {
   const navigate = useNavigate();
   const { id } = useParams();
 
-  // Validation functions
-  const validateMedicationName = (name) => {
-    const regex = /^[a-zA-ZÀ-ÿ\s]+$/;
-    return name.trim() && regex.test(name);
-  };
+  // Função para buscar dados do lote
+  const fetchLoteData = async (numeroLote) => {
+    const token = getToken();
+    if (!token) return;
 
-  const validatePharmacyLot = (lot) => {
-    if (!lot.trim()) return false;
-    const onlyNumbers = /^\d+$/.test(lot);
-    const onlyLetters = /^[a-zA-Z]+$/.test(lot);
-    const hasBoth = /[a-zA-Z]/.test(lot) && /\d/.test(lot);
-    return !onlyNumbers && !onlyLetters && hasBoth;
-  };
+    try {
+      const response = await fetch(`http://localhost:5000/lotes?numeroLote=${numeroLote}`, {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
-  const validatePurchaseLot = (lot) => {
-    return validatePharmacyLot(lot);
-  };
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || "Erro ao buscar dados do lote");
+      }
 
-  const validateManufacturer = (manufacturer) => {
-    if (!manufacturer.trim()) return false;
-    const hasNumbers = /\d/.test(manufacturer);
-    const hasSequentialLetters = /([a-zA-Z])\1\1/.test(manufacturer);
-    return !hasNumbers && !hasSequentialLetters;
+      const data = await response.json();
+      if (data && data.length > 0) {
+        const lote = data[0];
+        
+        setFormData(prev => ({
+          ...prev,
+          lotNumber: lote.loteCompraMedicamento || "",
+          medicationName: lote.nomeMedicamento || "",
+          manufacturer: lote.fornecedor || "",
+          grams: lote.gramas || 0,
+          quantity: lote.quantidadeRecebida || 1,
+          manufacturingDate: lote.dataFabricacao ? 
+            new Date(lote.dataFabricacao).toISOString().split('T')[0] : "",
+          expirationDate: lote.dataValidade ? 
+            new Date(lote.dataValidade).toISOString().split('T')[0] : ""
+        }));
+      } else {
+        // Limpa os campos se não encontrar o lote
+        setFormData(prev => ({
+          ...prev,
+          lotNumber: "",
+          medicationName: "",
+          manufacturer: "",
+          grams: 0,
+          quantity: 1,
+          manufacturingDate: "",
+          expirationDate: ""
+        }));
+      }
+    } catch (error) {
+      console.error("Erro ao buscar dados do lote:", error);
+    }
   };
 
   const getToken = () => {
@@ -86,14 +106,7 @@ const MedicamentosForm = ({ batch, onClose, onSave }) => {
         });
 
         if (!response.ok) {
-          const errorText = await response.text();
-          if (response.status === 401 && errorText.includes("expired")) {
-            localStorage.removeItem("userData");
-            alert("Sua sessão expirou. Faça login novamente.");
-            navigate("/login");
-            return;
-          }
-          throw new Error(`Erro ao buscar lotes: ${errorText}`);
+          throw new Error(`Erro ao buscar lotes`);
         }
 
         const data = await response.json();
@@ -132,7 +145,7 @@ const MedicamentosForm = ({ batch, onClose, onSave }) => {
         lotNumber: "",
         expirationDate: today,
         manufacturer: "",
-        quantity: 0,
+        quantity: 1,
         medicationName: "",
         medicationImage: "",
         manufacturingDate: today,
@@ -141,32 +154,15 @@ const MedicamentosForm = ({ batch, onClose, onSave }) => {
     }
   }, [batch]);
 
-  const checkDuplicates = (number, lotNumber, medicationName) => {
-  const batchesToCheck = existingBatches.filter(
-    (existingBatch) => !batch || existingBatch.id !== batch.id
-  );
-
-  let isDuplicateNumber = false;
-  let isDuplicateLotNumber = false;
-
-  if (number && medicationName) {
-    isDuplicateNumber = batchesToCheck.some(
-      (batch) =>
-        batch.number.toLowerCase() === number.toLowerCase() &&
-        batch.medicationName.toLowerCase() === medicationName.toLowerCase()
+  const checkDuplicates = (number) => {
+    const batchesToCheck = existingBatches.filter(
+      (existingBatch) => !batch || existingBatch.id !== batch.id
     );
-  }
 
-  if (lotNumber && medicationName) {
-    isDuplicateLotNumber = batchesToCheck.some(
-      (batch) =>
-        batch.lotNumber.toLowerCase() === lotNumber.toLowerCase() &&
-        batch.medicationName.toLowerCase() === medicationName.toLowerCase()
+    return batchesToCheck.some(
+      (batch) => batch.number.toLowerCase() === number.toLowerCase()
     );
-  }
-
-  return { isDuplicateNumber, isDuplicateLotNumber };
-};
+  };
 
   const saveBatch = async (batchData) => {
     setIsLoading(true);
@@ -179,17 +175,16 @@ const MedicamentosForm = ({ batch, onClose, onSave }) => {
         : "http://localhost:5000/medicamentos";
 
       const payload = {
-    number: batchData.number,
-    lotNumber: batchData.lotNumber,
-    expirationDate: batchData.expirationDate,
-    manufacturer: batchData.manufacturer,
-    quantity: Number(batchData.quantity) || 0,
-    medicationName: batchData.medicationName.charAt(0).toUpperCase() + 
-                    batchData.medicationName.slice(1).toLowerCase(),
-    medicationImage: batchData.medicationImage || null,
-    manufacturingDate: batchData.manufacturingDate,
-    grams: batchData.grams,
-  };
+        number: batchData.number,
+        lotNumber: batchData.lotNumber,
+        expirationDate: batchData.expirationDate,
+        manufacturer: batchData.manufacturer,
+        quantity: Number(batchData.quantity) || 1,
+        medicationName: batchData.medicationName,
+        medicationImage: batchData.medicationImage || null,
+        manufacturingDate: batchData.manufacturingDate,
+        grams: batchData.grams,
+      };
 
       const token = getToken();
 
@@ -203,29 +198,13 @@ const MedicamentosForm = ({ batch, onClose, onSave }) => {
         method: isEdit ? "PUT" : "POST",
         headers: {
           "Content-Type": "application/json",
-          Accept: "application/json",
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
-        const errorText = await response.text();
-        if (response.status === 401 && errorText.includes("expired")) {
-          localStorage.removeItem("userData");
-          alert("Sua sessão expirou. Faça login novamente.");
-          navigate("/login");
-          return;
-        }
-
-        let errorData;
-        try {
-          errorData = JSON.parse(errorText);
-        } catch {
-          errorData = { message: `Erro HTTP! status: ${response.status}` };
-        }
-        toast.error(errorData.message || "Erro ao salvar o lote");
-        throw new Error(errorData.message || "Erro ao salvar o lote");
+        throw new Error("Erro ao salvar o lote");
       }
 
       const result = await response.json();
@@ -242,20 +221,21 @@ const MedicamentosForm = ({ batch, onClose, onSave }) => {
   };
 
   const handleInputChange = (name, value) => {
-    if (name === "number" || name === "lotNumber") {
-      const { isDuplicateNumber, isDuplicateLotNumber } = checkDuplicates(
-        name === "number" ? value : formData.number,
-        name === "lotNumber" ? value : formData.lotNumber,
-        formData.medicationName
-      );
-      setFormErrors((prev) => ({
-        ...prev,
-        duplicateNumber: isDuplicateNumber,
-        duplicateLotNumber: isDuplicateLotNumber,
-      }));
-    }
+    if (name === "number") {
+      const normalizedValue = value.replace(/\s+/g, '').toUpperCase();
+      setFormData(prev => ({ ...prev, [name]: normalizedValue }));
+      
+      if (normalizedValue.length >= 3) {
+        fetchLoteData(normalizedValue);
+      }
 
-    setFormData((prev) => ({ ...prev, [name]: value }));
+      setFormErrors({
+        number: !normalizedValue.trim(),
+        duplicateNumber: checkDuplicates(normalizedValue)
+      });
+    } else if (name === "medicationImage") {
+      setFormData(prev => ({ ...prev, [name]: value }));
+    }
   };
 
   const handleImageChange = (e) => {
@@ -263,67 +243,25 @@ const MedicamentosForm = ({ batch, onClose, onSave }) => {
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setFormData((prev) => ({ ...prev, medicationImage: reader.result }));
+        handleInputChange("medicationImage", reader.result);
       };
       reader.readAsDataURL(file);
     }
   };
 
   const handleSubmit = async () => {
-    const manufacturingDate = new Date(formData.manufacturingDate + "T00:00:00");
-    const expirationDate = new Date(formData.expirationDate + "T00:00:00");
+    if (!formData.number.trim()) {
+      setErrorMessage("O código do lote de farmácia é obrigatório");
+      return;
+    }
 
-    const manufacturingDateString = manufacturingDate.toISOString().split("T")[0];
-    const expirationDateString = expirationDate.toISOString().split("T")[0];
-
-    const { isDuplicateNumber, isDuplicateLotNumber } = checkDuplicates(
-      formData.number,
-      formData.lotNumber,
-      formData.medicationName
-    );
-
-    const errors = {
-      medicationName: !validateMedicationName(formData.medicationName),
-      number: !validatePharmacyLot(formData.number),
-      lotNumber: !validatePurchaseLot(formData.lotNumber),
-      manufacturer: !validateManufacturer(formData.manufacturer),
-      quantity: formData.quantity <= 0,
-      expirationDate: manufacturingDateString >= expirationDateString,
-      grams: formData.grams <= 0,
-      duplicateNumber: isDuplicateNumber,
-      duplicateLotNumber: isDuplicateLotNumber,
-    };
-
-    setFormErrors(errors);
-
-    if (Object.values(errors).some((error) => error)) {
-      if (errors.duplicateNumber) {
-        setErrorMessage("O código do lote de farmácia já existe para este medicamento.");
-      } else if (errors.duplicateLotNumber) {
-        setErrorMessage("O lote de compra já existe para este medicamento.");
-      } else if (errors.medicationName) {
-        setErrorMessage("Nome do medicamento deve conter apenas letras e não pode estar vazio.");
-      } else if (errors.number) {
-        setErrorMessage("Código de lote de farmácia deve conter letras e números mesclados e não pode estar vazio.");
-      } else if (errors.lotNumber) {
-        setErrorMessage("Lote de compra deve conter letras e números mesclados e não pode estar vazio.");
-      } else if (errors.manufacturer) {
-        setErrorMessage("Fabricante não pode conter números ou letras sequenciais e não pode estar vazio.");
-      } else if (errors.quantity) {
-        setErrorMessage("Quantidade deve ser maior que zero.");
-      } else if (errors.grams) {
-        setErrorMessage("Gramas do medicamento deve ser maior que zero.");
-      } else if (errors.expirationDate) {
-        setErrorMessage("Data de validade deve ser posterior à data de fabricação.");
-      } else {
-        setErrorMessage("Por favor, preencha todos os campos corretamente!");
-      }
+    if (formErrors.duplicateNumber) {
+      setErrorMessage("Este código de lote de farmácia já existe");
       return;
     }
 
     try {
-      const batchToSave = { ...formData };
-      await saveBatch(batchToSave);
+      await saveBatch(formData);
       onSave();
     } catch (error) {
       console.error("Erro ao salvar lote:", error);
@@ -364,24 +302,14 @@ const MedicamentosForm = ({ batch, onClose, onSave }) => {
             </Form.Label>
             <Form.Control
               type="text"
-              placeholder="Digite o nome do medicamento"
               value={formData.medicationName}
-              onChange={(e) =>
-                handleInputChange("medicationName", e.target.value)
-              }
-              isInvalid={formErrors.medicationName}
+              readOnly
             />
-            <Form.Control.Feedback
-              type="invalid"
-              style={{ marginTop: "-16px", fontSize: "14px", color: "#dc3545" }}
-            >
-              Por favor, informe o nome do medicamento (apenas letras)
-            </Form.Control.Feedback>
           </Form.Group>
 
           <Form.Group className="mb-3" controlId="number">
             <Form.Label style={{ color: "#000000" }}>
-              Código Lote de Farmácia
+              Código Lote de Farmácia *
             </Form.Label>
             <Form.Control
               type="text"
@@ -400,7 +328,7 @@ const MedicamentosForm = ({ batch, onClose, onSave }) => {
             >
               {formErrors.duplicateNumber
                 ? "Este código de lote de farmácia já existe"
-                : "Informe um código válido (letras e números mesclados)"}
+                : "Informe um código válido"}
             </Form.Control.Feedback>
           </Form.Group>
 
@@ -410,62 +338,27 @@ const MedicamentosForm = ({ batch, onClose, onSave }) => {
             </Form.Label>
             <Form.Control
               type="text"
-              placeholder="Digite o lote do fabricante"
               value={formData.lotNumber}
-              onChange={(e) => {
-                if (e.target.value.length <= 12) {
-                  handleInputChange("lotNumber", e.target.value);
-                }
-              }}
-              isInvalid={formErrors.lotNumber || formErrors.duplicateLotNumber}
+              readOnly
             />
-            <Form.Control.Feedback
-              type="invalid"
-              style={{ marginTop: "-16px", fontSize: "14px", color: "#dc3545" }}
-            >
-              {formErrors.duplicateLotNumber
-                ? "Este lote de compra já existe"
-                : "Informe um lote válido (letras e números mesclados)"}
-            </Form.Control.Feedback>
           </Form.Group>
 
           <Form.Group className="mb-3" controlId="manufacturer">
             <Form.Label style={{ color: "#000000" }}>Fabricante</Form.Label>
             <Form.Control
               type="text"
-              placeholder="Digite o fabricante"
               value={formData.manufacturer}
-              onChange={(e) =>
-                handleInputChange("manufacturer", e.target.value)
-              }
-              isInvalid={formErrors.manufacturer}
+              readOnly
             />
-            <Form.Control.Feedback
-              type="invalid"
-              style={{ marginTop: "-16px", fontSize: "14px", color: "#dc3545" }}
-            >
-              Fabricante não pode conter números ou letras sequenciais
-            </Form.Control.Feedback>
           </Form.Group>
 
           <Form.Group className="mb-3" controlId="quantity">
             <Form.Label style={{ color: "#000000" }}>Quantidade</Form.Label>
             <Form.Control
               type="number"
-              min="0"
-              placeholder="Digite a quantidade"
               value={formData.quantity}
-              onChange={(e) =>
-                handleInputChange("quantity", parseInt(e.target.value) || 0)
-              }
-              isInvalid={formErrors.quantity}
+              readOnly
             />
-            <Form.Control.Feedback
-              type="invalid"
-              style={{ marginTop: "-16px", fontSize: "14px", color: "#dc3545" }}
-            >
-              A quantidade deve ser maior que zero
-            </Form.Control.Feedback>
           </Form.Group>
 
           <Form.Group className="mb-3" controlId="grams">
@@ -474,20 +367,9 @@ const MedicamentosForm = ({ batch, onClose, onSave }) => {
             </Form.Label>
             <Form.Control
               type="number"
-              min="0"
-              placeholder="Digite a quantidade em gramas"
               value={formData.grams}
-              onChange={(e) =>
-                handleInputChange("grams", parseFloat(e.target.value) || 0)
-              }
-              isInvalid={formErrors.grams}
+              readOnly
             />
-            <Form.Control.Feedback
-              type="invalid"
-              style={{ marginTop: "-16px", fontSize: "14px", color: "#dc3545" }}
-            >
-              Por favor, informe a quantidade em gramas
-            </Form.Control.Feedback>
           </Form.Group>
 
           <Form.Group className="mb-3" controlId="manufacturingDate">
@@ -497,9 +379,7 @@ const MedicamentosForm = ({ batch, onClose, onSave }) => {
             <Form.Control
               type="date"
               value={formData.manufacturingDate}
-              onChange={(e) =>
-                handleInputChange("manufacturingDate", e.target.value)
-              }
+              readOnly
             />
           </Form.Group>
 
@@ -510,17 +390,8 @@ const MedicamentosForm = ({ batch, onClose, onSave }) => {
             <Form.Control
               type="date"
               value={formData.expirationDate}
-              onChange={(e) =>
-                handleInputChange("expirationDate", e.target.value)
-              }
-              isInvalid={formErrors.expirationDate}
+              readOnly
             />
-            <Form.Control.Feedback
-              type="invalid"
-              style={{ marginTop: "-16px", fontSize: "14px", color: "#dc3545" }}
-            >
-              A data de validade deve ser posterior à data de fabricação
-            </Form.Control.Feedback>
           </Form.Group>
 
           <Form.Group className="mb-3" controlId="medicationImage">
@@ -540,8 +411,7 @@ const MedicamentosForm = ({ batch, onClose, onSave }) => {
           Cancelar
         </Button>
         <Button variant="primary" onClick={handleSubmit} disabled={isLoading}>
-          {isLoading ? "Salvando..." : formData.id ? "Atualizar" : "Salvar"}{" "}
-       
+          {isLoading ? "Salvando..." : formData.id ? "Atualizar" : "Salvar"}
         </Button>
       </Modal.Footer>
 

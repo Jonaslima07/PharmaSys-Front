@@ -1,4 +1,7 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const LoteForm = ({
   formData: initialFormData,
@@ -30,35 +33,76 @@ const LoteForm = ({
   const [existingLotes, setExistingLotes] = useState([]);
   const [errorMessage, setErrorMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const navigate = useNavigate(); 
 
-  useEffect(() => {
-    const fetchLotes = async () => {
+const getToken = () => {
+    const userDataString = localStorage.getItem("userData");
+    if (userDataString) {
       try {
-        const userDataString = localStorage.getItem("userData");
-        if (!userDataString) throw new Error("Usuário não autenticado");
-
         const userData = JSON.parse(userDataString);
-        const token = userData?.token;
-        if (!token) throw new Error("Token não encontrado");
-
-        const response = await fetch("http://localhost:5000/lotes", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        if (!response.ok) throw new Error("Erro ao carregar lotes");
-
-        const data = await response.json();
-        setExistingLotes(data);
+        if (userData && userData.token) {
+          return userData.token;
+        }
       } catch (error) {
-        console.error("Erro ao buscar lotes:", error);
-        setErrorMessage(error.message);
+        console.error("Erro ao parsear userData:", error);
       }
-    };
+    }
+    navigate("/login");
+    return null;
+  };
 
-    fetchLotes();
-  }, []);
+useEffect(() => {
+  const loadLotes = async () => {
+    const userDataString = localStorage.getItem("userData");
+    if (!userDataString) {
+      navigate("/login");
+      return;
+    }
+
+    let token;
+    try {
+      const userData = JSON.parse(userDataString);
+      token = userData?.token;
+      if (!token) {
+        navigate("/login");
+        return;
+      }
+    } catch {
+      localStorage.removeItem("userData");
+      navigate("/login");
+      return;
+    }
+
+    try {
+      const response = await fetch("http://localhost:5000/lotes", {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        if (response.status === 401) {
+          localStorage.removeItem("userData");
+          alert("Sua sessão expirou. Faça login novamente.");
+          navigate("/login");
+          return;
+        }
+        throw new Error(`Erro ao buscar lotes: ${errorText}`);
+      }
+
+      const data = await response.json();
+      setExistingLotes(data);
+    } catch (error) {
+      console.error("Erro ao carregar lotes:", error);
+      toast.error(error.message);
+    }
+  };
+
+  loadLotes();
+}, [navigate]);
+
 
   useEffect(() => {
     if (initialFormData) {
@@ -203,7 +247,7 @@ const LoteForm = ({
     if (id === "numeroLote" || id === "loteCompraMedicamento") {
       processedValue = value.replace(/[^a-zA-Z0-9]/g, '').slice(0, 12).toUpperCase();
     } else if (id === "nomeMedicamento" || id === "fornecedor" || id === "responsavelRecebimento") {
-      processedValue = value.replace(/[0-9!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/g, '');
+      processedValue = value.replace(/[0-9!@#$%^&*()_+\-=\][\]{};':"\\|,.<>\]/?]/g, '');
     }
     
     setFormData((prev) => ({ ...prev, [id]: processedValue }));
@@ -249,6 +293,7 @@ const LoteForm = ({
   };
 
   return (
+     <>
     <form onSubmit={handleSubmit} style={{ maxWidth: "800px", margin: "0 auto" }}>
       <div style={styles.formHeader}>
         <h2 style={styles.formTitle}>
@@ -528,6 +573,20 @@ const LoteForm = ({
         </button>
       </div>
     </form>
+    <ToastContainer
+        position="top-right"
+        autoClose={5000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="colored"
+      />
+    </>
+    
   );
 };
 

@@ -9,7 +9,7 @@ const CriarContaForm = () => {
   const [email, setEmail] = useState('');
   const [birthDate, setBirthDate] = useState('');
   const [phone, setPhone] = useState('');
-  const [registrationId, setRegistrationId] = useState('');
+  const [crf, setCrf] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -29,141 +29,160 @@ const CriarContaForm = () => {
   const togglePasswordVisibility = () => setShowPassword(!showPassword);
   const toggleConfirmPasswordVisibility = () => setShowConfirmPassword(!showConfirmPassword);
 
-  const checkEmailExists = async (email) => {
-  try {
-    const response = await fetch(`http://localhost:5000/usuarios/registro?email=${email}`);
-    if (!response.ok) {
-      return false; 
-    }
-    const data = await response.json();
-    return !!data.id; 
-  } catch (error) {
-    console.error('Erro ao verificar email:', error);
-    return false;
-  }
-};
-
-const checkPhoneExists = async (phone) => {
-  try {
-    const response = await fetch(`http://localhost:5000/usuarios/registro?phone=${phone}`);
-    if (!response.ok) {
+  const checkUserExists = async (field, value) => {
+    try {
+      const response = await fetch(`http://localhost:5000/usuarios/verificar-usuario?${field}=${encodeURIComponent(value)}`);
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.mensagem || 'Erro ao verificar usuário');
+      }
+      const data = await response.json();
+      return data.existe;
+    } catch (error) {
+      console.error(`Erro ao verificar ${field}:`, error);
       return false;
     }
-    const data = await response.json();
-    return !!data.id; 
-  } catch (error) {
-    console.error('Erro ao verificar telefone:', error);
-    return false;
-  }
-};
+  };
 
+  const createUser = async (dados) => {
+    try {
+      const response = await fetch("http://localhost:5000/usuarios", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(dados),
+      });
 
-const createUser = async (dados) => {
-  const response = await fetch("http://localhost:5000/usuarios/registro", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(dados),
-  });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.mensagem || "Erro ao criar usuário");
+      }
 
-  if (!response.ok) {
-    const erro = await response.json();
-    throw new Error(erro.mensagem || "Erro ao criar usuário");
-  }
-
-  return await response.json();
-};
-
+      return await response.json();
+    } catch (error) {
+      console.error("Erro detalhado:", error);
+      throw error;
+    }
+  };
 
   const handleSubmit = async (e) => {
-  e.preventDefault();
+    e.preventDefault();
 
-  if (!name || !email || !birthDate || !phone || !password || password !== confirmPassword) {
-    showToast('Preencha todos os campos corretamente.', 'error');
-    return;
-  }
+    // Validações básicas
+    const trimmedName = name.trim();
+    const trimmedEmail = email.trim();
+    const trimmedPhone = phone.trim();
+    const trimmedCrf = crf.trim();
 
-  if (password.length < 6) {
-    showToast('A senha deve ter pelo menos 6 caracteres.', 'error');
-    return;
-  }
-
-  setIsLoading(true);
-
-  try {
-    // Validações preliminares, pode manter ou remover, já que o backend também valida.
-    const emailExists = await checkEmailExists(email);
-    if (emailExists) {
-      showToast('Este email já está cadastrado.', 'error');
-      setIsLoading(false);
+    if (!trimmedName || !trimmedEmail || !birthDate || !trimmedPhone || !password || !confirmPassword) {
+      showToast('Preencha todos os campos obrigatórios.', 'error');
       return;
     }
 
-    const phoneExists = await checkPhoneExists(phone);
-    if (phoneExists) {
-      showToast('Este telefone já está cadastrado.', 'error');
-      setIsLoading(false);
+    if (!/^[A-Za-zÀ-ÿ\s]+$/.test(trimmedName)) {
+      showToast('O nome só pode conter letras e espaços.', 'error');
       return;
     }
 
-    const now = new Date();
-    const createdAt = new Date(now.getTime() - now.getTimezoneOffset() * 60000)
-      .toISOString()
-      .slice(0, 19);
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      showToast('E-mail inválido.', 'error');
+      return;
+    }
 
-    const finalRole = registrationId.trim() === '' ? 'administrador' : 'farmacêutico';
+    if (!/^\d{10,15}$/.test(trimmedPhone)) {
+      showToast('Telefone inválido. Use apenas números com DDD.', 'error');
+      return;
+    }
 
-    const newUser = {
-      name,
-      email,
-      birthDate,
-      role: finalRole,
-      phone,
-      crf: registrationId.trim(),
-      password,
-      createdAt,
-    };
+    if (trimmedCrf && !/^\d+$/.test(trimmedCrf)) {
+      showToast('O CRF deve conter apenas números.', 'error');
+      return;
+    }
 
-    // Tenta criar o usuário
-    await createUser(newUser);
+    if (password.length < 6) {
+      showToast('A senha deve ter pelo menos 6 caracteres.', 'error');
+      return;
+    }
 
-    // Após criar, tenta logar automaticamente
-    const loginResponse = await fetch('http://localhost:5000/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
-    });
+    if (password !== confirmPassword) {
+      showToast('As senhas não coincidem.', 'error');
+      return;
+    }
 
-    const loginData = await loginResponse.json();
-    if (!loginResponse.ok) throw new Error(loginData.mensagem || 'Erro no login automático');
+    setIsLoading(true);
 
-    const token = loginData.token;
-    const user = loginData.user;
+    try {
+      // Verificar existência de dados
+      const [emailExists, phoneExists, crfExists] = await Promise.all([
+        checkUserExists('email', trimmedEmail),
+        checkUserExists('phone', trimmedPhone),
+        trimmedCrf ? checkUserExists('crf', trimmedCrf) : Promise.resolve(false)
+      ]);
 
-    const verifyRes = await fetch(`http://localhost:5000/usuarios/verificar-cadastro?email=${email}`);
-    const verifyData = await verifyRes.json();
-
-    localStorage.setItem('userData', JSON.stringify({ token, user }));
-
-    showToast('Conta criada com sucesso!', 'success');
-
-    setTimeout(() => {
-      if (verifyData.cadastroCompleto) {
-        navigate('/cadastrarlotes');
-      } else {
-        navigate('/completarcadastro');
+      if (emailExists) {
+        showToast('Este e-mail já está cadastrado.', 'error');
+        return;
       }
-    }, 1500);
-  } catch (error) {
-    console.error(error);
-    // Exibe mensagem retornada pelo backend (erro.message) ou uma genérica
-    showToast(error.message || 'Erro ao criar conta.', 'error');
-  } finally {
-    setIsLoading(false);
-  }
-};
 
+      if (phoneExists) {
+        showToast('Este telefone já está cadastrado.', 'error');
+        return;
+      }
+
+      if (crfExists) {
+        showToast('Este CRF já está cadastrado.', 'error');
+        return;
+      }
+
+      // Formatar data para YYYY-MM-DD
+      const formattedDate = new Date(birthDate).toISOString().split('T')[0];
+
+      // Criar objeto de usuário
+      const newUser = {
+        name: trimmedName,
+        email: trimmedEmail,
+        phone: trimmedPhone,
+        password: password,
+        birthDate: formattedDate,
+        crf: trimmedCrf || null,
+        role: trimmedCrf ? 'farmacêutico' : 'administrador',
+        emailConfirmed: true
+      };
+
+      // Criar usuário no backend
+      const userData = await createUser(newUser);
+      
+      // Login automático após cadastro
+      const loginResponse = await fetch('http://localhost:5000/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: trimmedEmail, password }),
+      });
+
+      const loginData = await loginResponse.json();
+      if (!loginResponse.ok) throw new Error(loginData.mensagem || 'Erro no login automático');
+
+      // Salvar dados do usuário
+      localStorage.setItem('userData', JSON.stringify({
+        token: loginData.token,
+        user: loginData.user
+      }));
+
+      showToast('Conta criada com sucesso!', 'success');
+
+      // Redirecionar
+      setTimeout(() => {
+        navigate(loginData.user.cadastro_completo ? '/cadastrarlotes' : '/completarcadastro');
+      }, 1500);
+
+    } catch (error) {
+      console.error('Erro detalhado:', error);
+      showToast(error.message || 'Erro ao processar o cadastro', 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleGoogleSignup = async () => {
     setIsLoading(true);
@@ -246,8 +265,8 @@ const createUser = async (dados) => {
             </div>
 
             <div style={styles.formGroup}>
-              <label style={styles.labelRegistration}>Registro Profissional</label>
-              <input type="text" value={registrationId} onChange={(e) => setRegistrationId(e.target.value)} style={styles.inputRegistration} disabled={isLoading} />
+              <label style={styles.labelRegistration}>CRF (Opcional)</label>
+              <input type="text" value={crf} onChange={(e) => setCrf(e.target.value)} style={styles.inputRegistration} disabled={isLoading} />
             </div>
 
             <div style={styles.formGroup}>
@@ -290,31 +309,29 @@ const createUser = async (dados) => {
   );
 };
 
+// Manter os mesmos estilos do original
 const styles = {
-  
   googleWrapper: {
-  position: 'relative',
-  width: '422px',
-  left: '-100px',
-  top: '-180px',
-  marginTop: '10px',
-  display: 'flex',
-  justifyContent: 'center',
-  backgroundColor: 'transparent', // garante que o fundo não interfira
-  zIndex: 1, 
-},
+    position: 'relative',
+    width: '422px',
+    left: '-100px',
+    top: '-180px',
+    marginTop: '10px',
+    display: 'flex',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
+    zIndex: 1, 
+  },
   googleInnerWrapper: {
     transform: 'scale(0.9)',
     width: '100%',
     display: 'flex',
     justifyContent: 'center'
   },
-
   passwordContainer: {
     position: 'relative',
     width: '200px', 
   },
-
   eyeIcontwo: {
     position: 'absolute',
     right: '10px',
@@ -327,7 +344,6 @@ const styles = {
     marginTop: '-150px',
     left: '390px'
   },
-
   eyeIcon: {
     position: 'absolute',
     right: '10px',
@@ -339,13 +355,12 @@ const styles = {
     zIndex: 2,
     marginTop: '-25px'
   },
-
   authContainer: {
     display: 'flex',
     height: '100vh',
     backgroundColor: 'white',
     width: '1500px',
-    overflow: 'hidden', // Remover overflow indesejado (apenas um overflow permitido)
+    overflow: 'hidden',
   },
   authLeft: {
     flex: 1,
@@ -358,7 +373,6 @@ const styles = {
     padding: '2rem',
     position: 'relative',
     left:'-113px'
-
   },
   logo: {
     width: '25px',
@@ -382,7 +396,6 @@ const styles = {
     justifyContent: 'center',
     alignItems: 'center',
     padding: '2rem',
-    
   },
   authContent: {
     width: '100%',
@@ -404,7 +417,6 @@ const styles = {
     position: 'relative',
     top:'245px',
     left:'-30px',
-
   },
   form: {
     width: '100%',
@@ -417,7 +429,6 @@ const styles = {
   formGroup: {
     marginBottom: '1.5rem',
   },
-
   inputBirthDate: {
     width: '418px',
     padding: '10px',
@@ -428,7 +439,6 @@ const styles = {
     position: 'relative',
     top:'175px',
   },
-
   labelBirthDate: {
     display: 'block',
     fontSize: '14px',
@@ -438,7 +448,6 @@ const styles = {
     position: 'relative',
     top:'175px',
   },
-
   label1: {
     display: 'block',
     fontSize: '14px',
@@ -448,7 +457,6 @@ const styles = {
     position: 'relative',
     top:'239px',
   },
-
   label2: {
     display: 'block',
     fontSize: '14px',
@@ -468,7 +476,6 @@ const styles = {
     top:'148px',
     left:'220px'
   },
-
   label4: {
     display: 'block',
     fontSize: '14px',
@@ -487,7 +494,6 @@ const styles = {
     position: 'relative',
     top:'-145px',
     left:'218px',
-    
   },
   input1: {
     width: '418px',
@@ -499,9 +505,8 @@ const styles = {
     position: 'relative',
     top:'238px',
   },
-
   input2: {
-   width: '418px',
+    width: '418px',
     padding: '10px',
     borderRadius: '6px',
     border: '1px solid #ddd',
@@ -510,8 +515,6 @@ const styles = {
     position: 'relative',
     top:'210px',
   },
-
-   // Novo estilo para o input do registro profissional
   inputRegistration: {
     width: '200px',
     padding: '10px',
@@ -522,8 +525,6 @@ const styles = {
     position: 'relative',
     top: '30px',
   },
-
-    // Novo estilo para o label do registro profissional
   labelRegistration: {
     display: 'block',
     fontSize: '14px',
@@ -533,8 +534,6 @@ const styles = {
     position: 'relative',
     top: '32px',
   },
-
-  
   input3: {
     width: '200px',
     padding: '10px',
@@ -546,7 +545,6 @@ const styles = {
     top: '145px',
     left:'220px'
   },
-  
   input4: {
     width: '200px',
     padding: '10px',
@@ -559,8 +557,7 @@ const styles = {
     marginTop: '30px',
     paddingRight: '40px', 
   },
-
-   input5: {
+  input5: {
     width: '200px',
     padding: '10px',
     borderRadius: '6px',
@@ -572,7 +569,6 @@ const styles = {
     left: '218px',
     paddingRight: '40px', 
   },
-
   button: {
     width: '422px',
     backgroundColor: '#001f3d',
@@ -586,7 +582,6 @@ const styles = {
     marginTop: '1rem',
     position: 'relative',
     top:'-190px',
-    
   },
   registerLink: {
     textAlign: 'center',
@@ -596,7 +591,6 @@ const styles = {
     position: 'relative',
     top:'-190px',
     left:'-100px'
-    
   },
   link: {
     textDecoration: 'none',
@@ -611,7 +605,6 @@ const styles = {
     position: 'relative',
     left:'240px',
     top:'50px',
-
     boxShadow: '0 2px 10px rgba(0, 0, 0, 0.1)',
   },
 };
