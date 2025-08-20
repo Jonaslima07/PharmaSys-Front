@@ -3,6 +3,7 @@ import { Button, Modal, Form, Alert } from "react-bootstrap";
 import { useNavigate, useParams } from "react-router-dom";
 import PesquisaPaciente from "./PesquisaPaciente";
 import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import {
   Edit2,
   Trash2,
@@ -46,44 +47,52 @@ const CadastrarPaciente = () => {
   const { id } = useParams();
   const [originalPaciente, setOriginalPaciente] = useState(null);
 
-
   const isEmpty = (value) => !value || !value.trim();
 
+  // Função para obter o token (igual ao MedicamentosForm)
   const getToken = () => {
     const userDataString = localStorage.getItem("userData");
-    if (userDataString) {
-      try {
-        const userData = JSON.parse(userDataString);
-        if (userData && userData.token) {
-          return userData.token;
-        }
-      } catch (error) {
-        console.error("Erro ao parsear userData:", error);
-      }
+    if (!userDataString) {
+      navigate("/login");
+      return null;
     }
-    navigate("/login");
-    return null;
+    
+    try {
+      const userData = JSON.parse(userDataString);
+      if (!userData?.token) {
+        navigate("/login");
+        return null;
+      }
+      return userData.token;
+    } catch (error) {
+      console.error("Erro ao parsear userData:", error);
+      navigate("/login");
+      return null;
+    }
   };
 
   useEffect(() => {
-    (async () => {
+    const token = getToken();
+    if (!token) return;
+
+    const loadData = async () => {
       try {
         await loadPacientes();
         if (id) {
           await loadPaciente(id);
         }
       } catch (error) {
-        console.error("Erro ao carregar pacientes:", error);
+        console.error("Erro ao carregar dados:", error);
+        toast.error("Erro ao carregar dados. Tente novamente.");
       }
-    })();
-  }, [id]);
+    };
+
+    loadData();
+  }, [id, navigate]);
 
   const loadPacientes = async () => {
     const token = getToken();
-    if (!token) {
-      navigate("/login");
-      return;
-    }
+    if (!token) return;
 
     try {
       const response = await fetch("http://localhost:5000/pacientes", {
@@ -114,10 +123,7 @@ const CadastrarPaciente = () => {
 
   const loadPaciente = async (id) => {
     const token = getToken();
-    if (!token) {
-      navigate("/login");
-      return;
-    }
+    if (!token) return;
 
     try {
       const response = await fetch(`http://localhost:5000/pacientes/${id}`, {
@@ -128,6 +134,11 @@ const CadastrarPaciente = () => {
       });
 
       if (!response.ok) {
+        if (response.status === 401) {
+          localStorage.removeItem("userData");
+          navigate("/login");
+          return;
+        }
         throw new Error("Erro ao carregar paciente");
       }
 
@@ -143,36 +154,51 @@ const CadastrarPaciente = () => {
   const savePaciente = async (paciente) => {
     const token = getToken();
     if (!token) {
-      alert("Token JWT não encontrado");
+      toast.error("Token não encontrado. Faça login novamente.");
+      navigate("/login");
       return;
     }
 
     const pacienteData = extractPacienteData(paciente);
 
-    const response = await fetch("http://localhost:5000/pacientes", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(pacienteData),
-    });
+    try {
+      const response = await fetch("http://localhost:5000/pacientes", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(pacienteData),
+      });
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      toast.error(errorData.erro || "Erro ao cadastrar paciente");
-      throw new Error(errorData.erro || "Erro ao cadastrar paciente");
+      if (!response.ok) {
+        if (response.status === 401) {
+          localStorage.removeItem("userData");
+          navigate("/login");
+          return;
+        }
+        const errorData = await response.json();
+        toast.error(errorData.erro || "Erro ao cadastrar paciente");
+        throw new Error(errorData.erro || "Erro ao cadastrar paciente");
+      }
+
+      const result = await response.json();
+      toast.success("Paciente cadastrado com sucesso!");
+      await loadPacientes();
+      resetForm();
+      return result;
+    } catch (error) {
+      console.error("Erro ao salvar paciente:", error);
+      toast.error(error.message);
+      throw error;
     }
-
-    toast.success("Paciente cadastrado com sucesso!");
-    await loadPacientes();
-    resetForm();
   };
 
   const editPaciente = async (paciente) => {
     const token = getToken();
     if (!token) {
-      alert("Token JWT não encontrado");
+      toast.error("Token não encontrado. Faça login novamente.");
+      navigate("/login");
       return;
     }
 
@@ -183,29 +209,40 @@ const CadastrarPaciente = () => {
       return;
     }
 
-    const response = await fetch(
-      `http://localhost:5000/pacientes/${paciente.id}`,
-      {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(pacienteData),
+    try {
+      const response = await fetch(
+        `http://localhost:5000/pacientes/${paciente.id}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(pacienteData),
+        }
+      );
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          localStorage.removeItem("userData");
+          navigate("/login");
+          return;
+        }
+        const errorData = await response.json();
+        toast.error(errorData.erro || "Erro ao editar paciente");
+        throw new Error(errorData.erro || "Erro ao editar paciente");
       }
-    );
 
-    const result = await response.json();
-
-    if (!response.ok) {
-      console.error("Erro:", result);
-      toast.error(result.erro || "Erro ao editar paciente");
-      throw new Error(result.erro || "Erro ao editar paciente");
+      const result = await response.json();
+      toast.success("Paciente editado com sucesso!");
+      await loadPacientes();
+      resetForm();
+      return result;
+    } catch (error) {
+      console.error("Erro ao editar paciente:", error);
+      toast.error(error.message);
+      throw error;
     }
-
-    toast.success("Paciente editado com sucesso!");
-    await loadPacientes();
-    resetForm();
   };
 
   const getChangedFields = () => {
@@ -232,104 +269,118 @@ const CadastrarPaciente = () => {
   });
 
   const deletePaciente = async (id) => {
-    if (!id || id <= 0 || !window.confirm("Tem certeza?")) return;
+    if (!id || id <= 0 || !window.confirm("Tem certeza que deseja excluir este paciente?")) return;
+    
     const token = getToken();
     if (!token) {
-      alert("Token JWT não encontrado");
+      toast.error("Token não encontrado. Faça login novamente.");
+      navigate("/login");
       return;
     }
 
-    const response = await fetch(`http://localhost:5000/pacientes/${id}`, {
-      method: "DELETE",
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    try {
+      const response = await fetch(`http://localhost:5000/pacientes/${id}`, {
+        method: "DELETE",
+        headers: { 
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}` 
+        },
+      });
 
-    if (!response.ok) {
-      alert("Erro ao deletar o paciente");
-      return;
+      if (!response.ok) {
+        if (response.status === 401) {
+          localStorage.removeItem("userData");
+          navigate("/login");
+          return;
+        }
+        throw new Error("Erro ao deletar o paciente");
+      }
+
+      toast.success("Paciente excluído com sucesso!");
+      await loadPacientes();
+      resetForm();
+    } catch (error) {
+      console.error("Erro ao deletar paciente:", error);
+      toast.error(error.message);
     }
-
-    toast.success("Paciente excluído com sucesso!");
-    await loadPacientes();
-    resetForm();
   };
 
   const handleInputChange = (name, value) => {
     let processedValue = value;
 
+    // Remove apenas caracteres não numéricos para campos numéricos
     if (["cpf", "rg", "cartao_sus", "telefone", "numero"].includes(name)) {
       processedValue = value.replace(/\D/g, "");
     }
 
+    // Remove números dos campos de texto (mas permite espaços)
     if (["nome", "rua", "bairro"].includes(name)) {
-      processedValue = value.replace(/[0-9]/g, "").trim();
+      processedValue = value.replace(/[0-9]/g, "");
     }
 
     setFormData({ ...formData, [name]: processedValue });
   };
 
   const handleAddPaciente = async () => {
-  const errors = {
-    nome: isEmpty(formData.nome) || formData.nome.trim().length < 3 || !/^[A-Za-zÀ-ÖØ-öø-ÿ\s]+$/.test(formData.nome.trim()),
-    cartao_sus: isEmpty(formData.cartao_sus) || !/^\d{15}$/.test(formData.cartao_sus),
-    rg: isEmpty(formData.rg) || !/^\d{7,10}$/.test(formData.rg),
-    cpf: isEmpty(formData.cpf) || !/^\d{11}$/.test(formData.cpf),
-    telefone: isEmpty(formData.telefone) || !/^\d{10,11}$/.test(formData.telefone),
-    rua: isEmpty(formData.rua) || formData.rua.trim().length < 3,
-    numero: isEmpty(formData.numero),
-    bairro: isEmpty(formData.bairro) || formData.bairro.trim().length < 3,
-  };
+    const errors = {
+      nome: isEmpty(formData.nome) || formData.nome.trim().length < 3 || !/^[A-Za-zÀ-ÖØ-öø-ÿ\s]+$/.test(formData.nome.trim()),
+      cartao_sus: isEmpty(formData.cartao_sus) || !/^\d{15}$/.test(formData.cartao_sus),
+      rg: isEmpty(formData.rg) || !/^\d{7,10}$/.test(formData.rg),
+      cpf: isEmpty(formData.cpf) || !/^\d{11}$/.test(formData.cpf),
+      telefone: isEmpty(formData.telefone) || !/^\d{10,11}$/.test(formData.telefone),
+      rua: isEmpty(formData.rua) || formData.rua.trim().length < 3,
+      numero: isEmpty(formData.numero),
+      bairro: isEmpty(formData.bairro) || formData.bairro.trim().length < 3,
+    };
 
-  setFormErrors(errors);
+    setFormErrors(errors);
 
-  if (Object.values(errors).includes(true)) {
-    toast.error("Por favor, preencha todos os campos corretamente!");
-    return;
-  }
-
-
-
-  // 🔹 Validação para evitar duplicados específicos
-const cpfDuplicado = pacientes.find(p => p.cpf === formData.cpf && p.id !== formData.id);
-if (cpfDuplicado) {
-  toast.error("Já existe um paciente cadastrado com este CPF.");
-  return;
-}
-
-const rgDuplicado = pacientes.find(p => p.rg === formData.rg && p.id !== formData.id);
-if (rgDuplicado) {
-  toast.error("Já existe um paciente cadastrado com este RG.");
-  return;
-}
-
-const susDuplicado = pacientes.find(p => p.cartao_sus === formData.cartao_sus && p.id !== formData.id);
-if (susDuplicado) {
-  toast.error("Já existe um paciente cadastrado com este Cartão SUS.");
-  return;
-}
- const cellDuplicado = pacientes.find(p => p.telefone === formData.telefone && p.id !== formData.id);
-if (cellDuplicado) {
-  toast.error("Já existe um paciente cadastrado com este telefone.");
-  return;
-}
- const nomeDuplicado = pacientes.find(p => p.nome === formData.nome && p.id !== formData.id);
-if (nomeDuplicado) {
-  toast.error("Já existe um paciente cadastrado com este nome.");
-  return;
-}
-
-  try {
-    if (formData.id) {
-      await editPaciente(formData);
-    } else {
-      await savePaciente(formData);
+    if (Object.values(errors).includes(true)) {
+      toast.error("Por favor, preencha todos os campos corretamente!");
+      return;
     }
-  } catch (error) {
-    console.error(error.message);
-    toast.error(error.message);
-  }
-};
 
+    const cpfDuplicado = pacientes.find(p => p.cpf === formData.cpf && p.id !== formData.id);
+    if (cpfDuplicado) {
+      toast.error("Já existe um paciente cadastrado com este CPF.");
+      return;
+    }
+
+    const rgDuplicado = pacientes.find(p => p.rg === formData.rg && p.id !== formData.id);
+    if (rgDuplicado) {
+      toast.error("Já existe um paciente cadastrado com este RG.");
+      return;
+    }
+
+    const susDuplicado = pacientes.find(p => p.cartao_sus === formData.cartao_sus && p.id !== formData.id);
+    if (susDuplicado) {
+      toast.error("Já existe um paciente cadastrado com este Cartão SUS.");
+      return;
+    }
+
+    const cellDuplicado = pacientes.find(p => p.telefone === formData.telefone && p.id !== formData.id);
+    if (cellDuplicado) {
+      toast.error("Já existe um paciente cadastrado com este telefone.");
+      return;
+    }
+
+    const nomeDuplicado = pacientes.find(p => p.nome === formData.nome && p.id !== formData.id);
+    if (nomeDuplicado) {
+      toast.error("Já existe um paciente cadastrado com este nome.");
+      return;
+    }
+
+    try {
+      if (formData.id) {
+        await editPaciente(formData);
+      } else {
+        await savePaciente(formData);
+      }
+    } catch (error) {
+      console.error(error.message);
+      toast.error(error.message);
+    }
+  };
 
   const resetForm = () => {
     setFormData({
@@ -360,6 +411,7 @@ if (nomeDuplicado) {
   const openModal = (paciente) => {
     if (paciente) {
       setFormData(paciente);
+      setOriginalPaciente(paciente);
       setEditMode(true);
     } else {
       resetForm();
@@ -380,7 +432,10 @@ if (nomeDuplicado) {
   const handleSearch = (searchTerm) => {
     const filtered = pacientes.filter(
       (paciente) =>
-        paciente.cpf.includes(searchTerm) || paciente.rg.includes(searchTerm)
+        paciente.cpf.includes(searchTerm) || 
+        paciente.rg.includes(searchTerm) ||
+        paciente.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        paciente.cartao_sus.includes(searchTerm)
     );
     setFilteredPacientes(filtered);
   };
@@ -397,7 +452,7 @@ if (nomeDuplicado) {
 
     const handleDelete = (e) => {
       e.stopPropagation();
-      if (window.confirm("Tem certeza que deseja excluir este paciente?")) {
+      if (onDelete) {
         onDelete(patient.id);
       }
     };
@@ -784,18 +839,6 @@ if (nomeDuplicado) {
           >
             {editMode ? "Editar" : "Salvar"}
           </Button>
-          {/* {editMode && (
-            <Button
-              variant="danger"
-              onClick={() => deletePaciente(formData.id)}
-              style={{
-                backgroundColor: "#d32f2f",
-                borderColor: "#d32f2f",
-              }}
-            >
-              Deletar
-            </Button>
-          )} */}
         </Modal.Footer>
       </Modal>
     </div>

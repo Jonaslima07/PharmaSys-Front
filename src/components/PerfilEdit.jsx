@@ -115,37 +115,64 @@ const PerfilEdit = () => {
     toast.info("Edição cancelada");
   };
 
-  const validateForm = () => {
-    if (!formData.name.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      toast.error("Verifique os campos obrigatórios");
+const validateForm = () => {
+  // Nome: obrigatório, sem números e sem apenas espaços
+  if (!formData.name.trim()) {
+    toast.error("O nome é obrigatório");
+    return false;
+  }
+  if (!/^[A-Za-zÀ-ÿ\s]+$/.test(formData.name.trim())) {
+    toast.error("O nome não pode conter números ou caracteres inválidos");
+    return false;
+  }
+
+  // Email: obrigatório e formato válido
+  if (!formData.email.trim()) {
+    toast.error("O email é obrigatório");
+    return false;
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+    toast.error("Formato de email inválido");
+    return false;
+  }
+
+  // Telefone: opcional, mas se preenchido precisa ter pelo menos 10 dígitos
+  if (formData.phone && formData.phone.replace(/\D/g, "").length < 10) {
+    toast.error("Telefone inválido. Informe DDD + número");
+    return false;
+  }
+
+  // CRF: obrigatório apenas para farmacêutico
+  if (formData.role === "farmacêutico") {
+    if (!formData.crf.trim()) {
+      toast.error("CRF obrigatório para farmacêuticos");
       return false;
     }
-    if (formData.phone && formData.phone.replace(/\D/g, "").length < 10) {
-      toast.error("Telefone inválido");
+    if (!/^\d{5}$/.test(formData.crf)) {
+      toast.error("CRF deve ter exatamente 5 dígitos numéricos");
       return false;
     }
-    if (formData.role === "farmaceutico") {
-      if (!formData.crf.trim()) {
-        toast.error("CRF obrigatório");
-        return false;
-      }
-      if (!/^\d{5}$/.test(formData.crf)) {
-        toast.error("CRF deve ter exatamente 5 dígitos numéricos");
-        return false;
-      }
+  }
+
+  // Senha: só valida se usuário tentar alterar
+  if (formData.newPassword || formData.confirmNewPassword || formData.currentPassword) {
+    if (!formData.currentPassword) {
+      toast.error("Informe sua senha atual para alterar");
+      return false;
     }
-    if (formData.newPassword || formData.confirmNewPassword || formData.currentPassword) {
-      if (
-        !formData.currentPassword ||
-        formData.newPassword.length < 6 ||
-        formData.newPassword !== formData.confirmNewPassword
-      ) {
-        toast.error("Verifique as senhas");
-        return false;
-      }
+    if (formData.newPassword.length < 6) {
+      toast.error("A nova senha deve ter pelo menos 6 caracteres");
+      return false;
     }
-    return true;
-  };
+    if (formData.newPassword !== formData.confirmNewPassword) {
+      toast.error("A confirmação da nova senha não confere");
+      return false;
+    }
+  }
+
+  return true;
+};
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -615,7 +642,7 @@ const PerfilEdit = () => {
           </div>
         </div>
 
-        {userData.role === "administrador" && (
+        {/* {userData.role === "administrador" && (
           <div style={styles.usersListSection}>
             <h2 style={styles.sectionTitle}>Lista de Usuários</h2>
             <table style={styles.table}>
@@ -660,7 +687,7 @@ const PerfilEdit = () => {
               </tbody>
             </table>
           </div>
-        )}
+        )} */}
       </div>
     </div>
   );
@@ -988,6 +1015,8 @@ const styles = {
   actionItem: {
     display: "flex",
     alignItems: "center",
+    position:"relative",
+    left:"48px",
     padding: "10px 0",
     cursor: "pointer",
     fontSize: "14px",

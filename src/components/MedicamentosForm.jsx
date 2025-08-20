@@ -145,7 +145,7 @@ const MedicamentosForm = ({ batch, onClose, onSave }) => {
         lotNumber: "",
         expirationDate: today,
         manufacturer: "",
-        quantity: 1,
+        quantity: 0,
         medicationName: "",
         medicationImage: "",
         manufacturingDate: today,
@@ -250,23 +250,30 @@ const MedicamentosForm = ({ batch, onClose, onSave }) => {
   };
 
   const handleSubmit = async () => {
-    if (!formData.number.trim()) {
-      setErrorMessage("O código do lote de farmácia é obrigatório");
-      return;
-    }
+  // Validação: existem lotes cadastrados?
+  if (!existingBatches || existingBatches.length === 0) {
+    toast.warning("Nenhum lote cadastrado! Cadastre um lote antes de adicionar o medicamento.");
+    return;
+  }
 
-    if (formErrors.duplicateNumber) {
-      setErrorMessage("Este código de lote de farmácia já existe");
-      return;
-    }
+  if (!formData.number.trim()) {
+    setErrorMessage("O código do lote de farmácia é obrigatório");
+    return;
+  }
 
-    try {
-      await saveBatch(formData);
-      onSave();
-    } catch (error) {
-      console.error("Erro ao salvar lote:", error);
-    }
-  };
+  if (formErrors.duplicateNumber) {
+    setErrorMessage("Este código de lote de farmácia já existe");
+    return;
+  }
+
+  try {
+    await saveBatch(formData);
+    onSave();
+  } catch (error) {
+    console.error("Erro ao salvar lote:", error);
+  }
+};
+
 
   return (
     <Modal show={true} onHide={onClose}>

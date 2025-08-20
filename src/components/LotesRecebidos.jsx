@@ -9,6 +9,7 @@ import {
   FaTrashAlt,
 } from "react-icons/fa";
 import LoteForm from "./LoteForm";
+import { useNavigate } from "react-router-dom";
 
 const formasFarmaceuticas = [
   "Comprimido",
@@ -54,6 +55,29 @@ const LotesRecebidos = () => {
   const [excluindo, setExcluindo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [forceReload, setForceReload] = useState(false);
+  const navigate = useNavigate();
+
+  // Função para obter o token (padronizada igual ao MedicamentosForm)
+  const getToken = () => {
+    const userDataString = localStorage.getItem("userData");
+    if (!userDataString) {
+      navigate("/login");
+      return null;
+    }
+    
+    try {
+      const userData = JSON.parse(userDataString);
+      if (!userData?.token) {
+        navigate("/login");
+        return null;
+      }
+      return userData.token;
+    } catch (error) {
+      console.error("Erro ao parsear userData:", error);
+      navigate("/login");
+      return null;
+    }
+  };
 
   const calculateStatus = (dataValidade) => {
     if (!dataValidade) return "A vencer";
@@ -105,23 +129,8 @@ const LotesRecebidos = () => {
     const fetchLotes = async () => {
       setLoading(true);
       try {
-        let userData = null;
-        try {
-          const userDataString = localStorage.getItem("userData");
-          if (userDataString && userDataString !== "undefined") {
-            userData = JSON.parse(userDataString);
-          }
-        } catch (error) {
-          console.error("Erro ao parsear userData:", error);
-          toast.error("Erro ao carregar dados do usuário");
-          return;
-        }
-
-        const token = userData?.token;
-        if (!token) {
-          toast.error("Token de autenticação não encontrado");
-          return;
-        }
+        const token = getToken();
+        if (!token) return;
 
         const response = await fetch("http://localhost:5000/lotes", {
           headers: {
@@ -130,7 +139,14 @@ const LotesRecebidos = () => {
           },
         });
 
-        if (!response.ok) throw new Error("Erro ao carregar os lotes");
+        if (!response.ok) {
+          if (response.status === 401) {
+            localStorage.removeItem("userData");
+            navigate("/login");
+            return;
+          }
+          throw new Error("Erro ao carregar os lotes");
+        }
 
         const data = await response.json();
         setLotes(data);
@@ -143,7 +159,7 @@ const LotesRecebidos = () => {
     };
 
     fetchLotes();
-  }, [forceReload]);
+  }, [forceReload, navigate]);
 
   const lotesFiltrados = lotes.filter((lote) => {
     try {
@@ -170,111 +186,56 @@ const LotesRecebidos = () => {
     }
   });
 
-  const validarFormulario = () => {
-    if (!formData.numeroLote || formData.numeroLote.length > 12) {
-      toast.error("Número do lote inválido");
-      return false;
+  const handleSaveLote = async (novoLote) => {
+    try {
+      const token = getToken();
+      if (!token) {
+        toast.error("Sessão expirada. Faça login novamente.");
+        return;
+      }
+
+      const method = loteEditando ? "PUT" : "POST";
+      const url = loteEditando 
+        ? `http://localhost:5000/lotes/${novoLote.id}` 
+        : "http://localhost:5000/lotes";
+
+      const response = await fetch(url, {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify(novoLote),
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          localStorage.removeItem("userData");
+          navigate("/login");
+          return;
+        }
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Erro ao salvar lote");
+      }
+
+      const data = await response.json();
+      setForceReload(prev => !prev);
+      
+      toast.success(
+        loteEditando 
+          ? "Lote atualizado com sucesso!" 
+          : "Lote cadastrado com sucesso!"
+      );
+      
+      setDialogAberto(false);
+      setLoteEditando(null);
+      
+    } catch (error) {
+      console.error("Erro ao salvar lote:", error);
+      toast.error(error.message || "Falha ao salvar lote");
     }
-    if (!formData.nomeMedicamento) {
-      toast.error("Nome do medicamento obrigatório");
-      return false;
-    }
-    if (
-      !formData.dataFabricacao ||
-      new Date(formData.dataFabricacao) > new Date()
-    ) {
-      toast.error("Data de fabricação inválida");
-      return false;
-    }
-    if (
-      !formData.dataValidade ||
-      new Date(formData.dataValidade) <= new Date(formData.dataFabricacao)
-    ) {
-      toast.error("Data de validade inválida");
-      return false;
-    }
-    if (!formData.quantidadeRecebida || formData.quantidadeRecebida <= 0) {
-      toast.error("Quantidade inválida");
-      return false;
-    }
-    if (!formData.fornecedor) {
-      toast.error("Fornecedor obrigatório");
-      return false;
-    }
-    if (!formData.responsavelRecebimento) {
-      toast.error("Responsável obrigatório");
-      return false;
-    }
-    if (
-      !formData.loteCompraMedicamento ||
-      formData.loteCompraMedicamento.length > 12
-    ) {
-      toast.error("Lote de compra inválido");
-      return false;
-    }
-    if (
-      !formData.dataRecebimento ||
-      new Date(formData.dataRecebimento) > new Date()
-    ) {
-      toast.error("Data de recebimento inválida");
-      return false;
-    }
-    if (!formData.unidadeMedida) {
-      toast.error("Unidade obrigatória");
-      return false;
-    }
-    return true;
   };
 
-  const handleSaveLote = async (novoLote) => {
-  // Remove a validação duplicada (já feita no LoteForm)
-  // Apenas prepara os dados e faz a chamada à API
-  
-  try {
-    const userData = JSON.parse(localStorage.getItem("userData"));
-    const token = userData?.token;
-    
-    if (!token) {
-      toast.error("Sessão expirada. Faça login novamente.");
-      return;
-    }
-
-    const method = loteEditando ? "PUT" : "POST";
-    const url = loteEditando 
-      ? `http://localhost:5000/lotes/${novoLote.id}` 
-      : "http://localhost:5000/lotes";
-
-    const response = await fetch(url, {
-      method,
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`,
-      },
-      body: JSON.stringify(novoLote),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || "Erro ao salvar lote");
-    }
-
-    const data = await response.json();
-    setForceReload(prev => !prev); // Força atualização da lista
-    
-    toast.success(
-      loteEditando 
-        ? "Lote atualizado com sucesso!" 
-        : "Lote cadastrado com sucesso!"
-    );
-    
-    setDialogAberto(false);
-    setLoteEditando(null);
-    
-  } catch (error) {
-    console.error("Erro ao salvar lote:", error);
-    toast.error(error.message || "Falha ao salvar lote");
-  }
-};
   const editarLote = (lote) => {
     setLoteEditando(lote);
     setFormData(lote);
@@ -287,19 +248,7 @@ const LotesRecebidos = () => {
 
     try {
       setExcluindo(id);
-      let userData = null;
-      try {
-        const userDataString = localStorage.getItem("userData");
-        if (userDataString && userDataString !== "undefined") {
-          userData = JSON.parse(userDataString);
-        }
-      } catch (error) {
-        console.error("Erro ao parsear userData:", error);
-        toast.error("Erro ao carregar dados do usuário");
-        return;
-      }
-
-      const token = userData?.token;
+      const token = getToken();
       if (!token) {
         toast.error("Token de autenticação não encontrado");
         return;
@@ -313,9 +262,15 @@ const LotesRecebidos = () => {
         },
       });
 
-      if (!response.ok) throw new Error("Erro ao excluir lote");
+      if (!response.ok) {
+        if (response.status === 401) {
+          localStorage.removeItem("userData");
+          navigate("/login");
+          return;
+        }
+        throw new Error("Erro ao excluir lote");
+      }
 
-      // Atualiza a lista após exclusão
       setForceReload(prev => !prev);
       toast.success("Lote excluído com sucesso!");
     } catch (error) {

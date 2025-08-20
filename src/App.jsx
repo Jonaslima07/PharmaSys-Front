@@ -83,7 +83,7 @@ function App() {
   return (
     <GoogleOAuthProvider clientId="1034318345825-lldn929hoddci5v10u3fof6o89mlul4f.apps.googleusercontent.com">
       {" "}
-      {/* Substitua com seu clientId */}
+    
       <RouterProvider router={router} />
     </GoogleOAuthProvider>
   );
